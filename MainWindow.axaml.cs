@@ -374,9 +374,37 @@ namespace ImageApp
         {
             // create the filter
             float[,] filter = new float[size, size];
-
-            // TODO: add your functionality and checks
-
+            
+            //calculates the center based on the input size
+            int center = size / 2;
+            float sigSquared = 2 * (sigma * sigma);
+            
+            //setup for the normalization
+            float sum = 0;
+            
+            //loop through given size
+            for (int x = 0; x < size; x++)
+            for (int y = 0; y < size; y++)
+            {
+                //distance from pixel coordinate to center
+                float dx = x - center;
+                float dy = y - center;
+                
+                //radius based on dx and dy
+                float r2 = (dx * dx) + (dy * dy);
+                
+                //calculates the gaussian value on the coordinate, assigns it on the matrix position
+                // and adds the value to the sum
+                float gaussianValue = (float)Math.Exp(-(r2/sigSquared));
+                filter[x, y] =  gaussianValue;
+                sum += gaussianValue;
+            }
+            
+            // normalizes the value in the filter matrix by dividing the assigned coordinate with the sum of g-values
+            for(int x = 0; x < size; x++)
+            for (int y = 0; y < size; y++)
+                filter[x, y] /= sum;
+            
             return filter;
         }
 
