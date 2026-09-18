@@ -333,10 +333,8 @@ namespace ImageApp
         /// <returns>A new 2D grayscale image with inverted intensities.</returns>
         private byte[,] InvertImage(byte[,] inputImage)
         {
-            // create temporary grayscale image
             int w = inputImage.GetLength(0);
             int h = inputImage.GetLength(1);
-            byte[,] tempImage = new byte[w, h];
 
             byte[,] invertedImage = new byte[w, h];
             for (int x = 0; x < w; x++)
@@ -356,12 +354,39 @@ namespace ImageApp
         /// <returns>A new 2D grayscale image with adjusted contrast.</returns>
         private byte[,] AdjustContrast(byte[,] inputImage)
         {
-            // create temporary grayscale image
-            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int w = inputImage.GetLength(0);
+            int h = inputImage.GetLength(1);
+            int aLow = 255;
+            int aHigh = 0;
 
-            // TODO: add your functionality and checks
+            for (int x = 0; x < w; x++)
+            for (int y = 0; y < h; y++)
+                {
+                    int val = inputImage[x,y];
+                    if(val < aLow)
+                    {
+                        aLow = val;
+                    }
+                    if(val > aHigh)
+                    {
+                        aHigh = val;
+                    }
+                }
+            if (aHigh == aLow)
+            {
+                return inputImage;
+            }
+            float adjustment = 255f / (aHigh-aLow);
 
-            return tempImage;
+            byte[,] contrastImage = new byte[w,h];
+            for (int x = 0; x < w; x++)
+            for (int y = 0; y < h; y++)
+                {
+                    int val = inputImage[x, y];
+                    contrastImage[x, y] = (byte)((val - aLow) * adjustment);
+                }
+
+            return contrastImage;
         }
 
         /// <summary>
