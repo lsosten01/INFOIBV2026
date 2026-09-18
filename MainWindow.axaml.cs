@@ -339,11 +339,21 @@ namespace ImageApp
         private byte[,] InvertImage(byte[,] inputImage)
         {
             // create temporary grayscale image
-            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int w = inputImage.GetLength(0);
+            int h = inputImage.GetLength(1);
+            byte[,] tempImage = new byte[w, h];
 
-            // TODO: add your functionality and checks
+            byte[,] invertedImage = new byte[w, h];
+            for (int x = 0; x < w; x++)
+            for (int y = 0; y < h; y++)
+            {
+                int r = colorPixels[x, y, 0];
+                int g = colorPixels[x, y, 1];
+                int b = colorPixels[x, y, 2];
+                invertedImage[x, y] = (byte)(255 - );
+            }
 
-            return tempImage;
+            return invertedImage;
         }
 
         /// <summary>

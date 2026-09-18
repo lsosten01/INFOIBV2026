@@ -71,3 +71,4 @@ C:\Users\Gebruiker\OneDrive - Universiteit Utrecht\Desktop\School\2026-2027\Beel
 C:\Users\Gebruiker\OneDrive - Universiteit Utrecht\Desktop\School\2026-2027\Beeldverwerking\Assignment\INFOIBV2026\INFOIBV2026\obj\Debug\net9.0\ImageApp.pdb
 C:\Users\Gebruiker\OneDrive - Universiteit Utrecht\Desktop\School\2026-2027\Beeldverwerking\Assignment\INFOIBV2026\INFOIBV2026\obj\Debug\net9.0\ImageApp.genruntimeconfig.cache
 C:\Users\Gebruiker\OneDrive - Universiteit Utrecht\Desktop\School\2026-2027\Beeldverwerking\Assignment\INFOIBV2026\INFOIBV2026\obj\Debug\net9.0\ref\ImageApp.dll
+C:\Users\Gebruiker\OneDrive - Universiteit Utrecht\Desktop\School\2026-2027\Beeldverwerking\Assignment\INFOIBV2026\INFOIBV2026\obj\Debug\net9.0\ImageApp.sourcelink.json
