@@ -90,12 +90,7 @@ namespace ImageApp
                 _loadedColorPixels = new byte[width, height, 3];
                 using (var fb = _loadedBitmap.Lock())
                 {
-                    decoded.CopyPixels(
-                        new(0, 0, width, height),
-                        fb.Address,
-                        fb.RowBytes * height,
-                        fb.RowBytes
-                    );
+                    decoded.CopyPixels(fb,AlphaFormat.Unpremul);
                     // ^ transcodes the decoded image into our WriteableBitmap's RGBA8888 layout
 
                     int totalBytes = fb.RowBytes * height;
