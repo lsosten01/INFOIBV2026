@@ -342,10 +342,8 @@ namespace ImageApp
             for (int x = 0; x < w; x++)
             for (int y = 0; y < h; y++)
             {
-                int r = colorPixels[x, y, 0];
-                int g = colorPixels[x, y, 1];
-                int b = colorPixels[x, y, 2];
-                invertedImage[x, y] = (byte)(255 - );
+                int val = inputImage[x, y];
+                invertedImage[x, y] = (byte)(255 - val );
             }
 
             return invertedImage;
