@@ -442,11 +442,26 @@ namespace ImageApp
         private byte[,] ThresholdImage(byte[,] inputImage, byte threshold)
         {
             // create temporary grayscale image
-            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+            int w = inputImage.GetLength(0);
+            int h = inputImage.GetLength(1);
+            
+            byte[,] threshImage = new byte[w, h];
+            for (int x = 0; x < w; x++)
+            for (int y = 0; y < h; y++)
+            {
+                int val = inputImage[x, y];
+                if (val <= 100)
+                    {
+                        threshImage[x, y] = 30;
+                    }
+                    else
+                    {
+                        threshImage[x, y] = 170;
+                    }
+                
+            }
 
-            // TODO: add your functionality and checks, think about how to represent the binary values
-
-            return tempImage;
+            return threshImage;
         }
 
         /// <summary>
