@@ -30,6 +30,7 @@ _UpgradeReport_Files/
 [Pp]ackages/
 bin/
 obj/
+.idea/
 
 Thumbs.db
 Desktop.ini
