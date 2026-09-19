@@ -2,11 +2,11 @@
 
 ## Task List
 ### Functions
-- [ ] Inversion
-- [ ] Thresholding
-- [ ] Contrast adjustment
-- [ ] Gaussian filter
-- [ ] Linear filtering
+- [X] Inversion
+- [X] Thresholding
+- [X] Contrast adjustment
+- [X] Gaussian filter
+- [X] Linear filtering
 - [ ] Median filtering
 - [ ] Edge detection
 - [ ] Binary Erosion/Dilation

@@ -214,7 +214,7 @@ namespace ImageApp
                             gray = AdjustContrast(gray);
                             break;
                         case ProcessingFunctions.ConvolveImage:
-                            gray = ConvolveImage(gray, CreateGaussianFilter(5, 1.0f));
+                            gray = ConvolveImage(gray, CreateGaussianFilter(13, 5.0f));
                             break;
                         case ProcessingFunctions.MedianFilter:
                             gray = MedianFilter(gray, 5);
@@ -361,17 +361,17 @@ namespace ImageApp
 
             for (int x = 0; x < w; x++)
             for (int y = 0; y < h; y++)
+            {
+                int val = inputImage[x,y];
+                if(val < aLow)
                 {
-                    int val = inputImage[x,y];
-                    if(val < aLow)
-                    {
-                        aLow = val;
-                    }
-                    if(val > aHigh)
-                    {
-                        aHigh = val;
-                    }
+                    aLow = val;
                 }
+                if(val > aHigh)
+                {
+                    aHigh = val;
+                }
+            }
             if (aHigh == aLow)
             {
                 return inputImage;
@@ -381,10 +381,10 @@ namespace ImageApp
             byte[,] contrastImage = new byte[w,h];
             for (int x = 0; x < w; x++)
             for (int y = 0; y < h; y++)
-                {
-                    int val = inputImage[x, y];
-                    contrastImage[x, y] = (byte)((val - aLow) * adjustment);
-                }
+            {
+                int val = inputImage[x, y];
+                contrastImage[x, y] = (byte)((val - aLow) * adjustment);
+            }
 
             return contrastImage;
         }
@@ -397,6 +397,9 @@ namespace ImageApp
         /// <returns>A 2D float array representing the normalized filter kernel.</returns>
         private float[,] CreateGaussianFilter(byte size, float sigma)
         {
+            if (size < 1 || size % 2 == 0)
+                throw new ArgumentException("Kernel size must be a positive odd integer", nameof(size));
+            
             // create the filter
             float[,] filter = new float[size, size];
             
@@ -441,12 +444,45 @@ namespace ImageApp
         /// <returns>The convolved grayscale image.</returns>
         private byte[,] ConvolveImage(byte[,] inputImage, float[,] filter)
         {
-            // create temporary grayscale image
-            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-
+            //create dimensions of input image 
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+            
+            //create dimensions of kernel
+            int kW = filter.GetLength(0);
+            int kH = filter.GetLength(1);
+            
+            //center of kernel
+            int centerX = kW / 2;
+            int centerY = kH / 2;
+            
+            byte[,] resultImage = new byte[iW, iH];
+            
             // TODO: add your functionality and checks, think about border handling and type conversion
+            
+            //image loop
+            for(int u = 0; u < iW; u++)
+            for(int v = 0; v < iH; v++)
+            {
+                float sum = 0;
+                
+                //loop over kernel positions based on (0,0) center
+                for(int i = -centerX; i < centerX; i++)
+                for(int j = -centerY; j < centerY; j++)
+                {
+                    //border of the image(u,v) based on the kernel(i,j)
+                    int uBorder = Math.Clamp(u + i, 0, iW - 1);
+                    int vBorder = Math.Clamp(v + j, 0, iH - 1);
+                    
+                    float coefficient = filter[i + centerX, j + centerY];
+                    sum += inputImage[uBorder, vBorder] * coefficient;
+                }
+                
+                int pixelVal = (int)Math.Round(sum);
+                resultImage[u, v] = (byte)Math.Clamp(pixelVal, 0, 255);
+            }
 
-            return tempImage;
+            return resultImage;
         }
 
         /// <summary>
@@ -504,13 +540,13 @@ namespace ImageApp
             {
                 int val = inputImage[x, y];
                 if (val <= 100)
-                    {
-                        threshImage[x, y] = 30;
-                    }
-                    else
-                    {
-                        threshImage[x, y] = 170;
-                    }
+                {
+                    threshImage[x, y] = 30;
+                }
+                else
+                {
+                    threshImage[x, y] = 170;
+                }
                 
             }
 
