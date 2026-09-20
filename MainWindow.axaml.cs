@@ -40,12 +40,36 @@ namespace ImageApp
             GrayscaleDilateImage,
         }
 
+        private enum Task1
+        {
+            FilterType,
+            KernelSize,
+            SigmaValue,
+            Threshold,
+        }
+
+        private enum FilterType
+        {
+            Gaussian,
+            Median,
+        }
+
+        private int kernelSize = 0;
+        private float sigmaValue = 1.0f;
+        private float threshold = 0;
+        private int filterType = 0;
+
         public MainWindow()
         {
             InitializeComponent();
+            var task1Box = this.Get<ComboBox>("Task1Box");
 
             OperationBox.ItemsSource = Enum.GetValues<ProcessingFunctions>();
             OperationBox.SelectedIndex = 0; // Select first item by default
+
+            task1Box.ItemsSource = Enum.GetValues<Task1>();
+            task1Box.SelectedIndex = 0;
+            
         }
 
         /// <summary>
@@ -166,6 +190,74 @@ namespace ImageApp
             }
         }
 
+        private async void OnTask1Changed(object? sender, SelectionChangedEventArgs e)
+        {
+            var parameterPanel = this.Get<StackPanel>("ParameterPanel");
+            var selected = Task1Box. SelectedItem;
+
+            switch (selected)
+            {
+                //put the numbers where they should be
+                case Task1.FilterType:
+                    parameterPanel.Children.Clear();
+                    
+                    //Creates a combobox
+                    var filterTypeBox = new ComboBox{Width = 100};
+                    filterTypeBox.ItemsSource = Enum.GetValues<FilterType>();
+                    filterTypeBox.SelectedIndex = filterType;
+                    parameterPanel.Children.Add(filterTypeBox);
+
+                    filterTypeBox.SelectionChanged += (_,_) =>{
+                        filterType = filterTypeBox.SelectedIndex;
+};
+                    break;
+
+                case Task1.KernelSize:
+                    parameterPanel.Children.Clear();
+                    var kernelSizeBox = new TextBox{Width = 100, Text = kernelSize.ToString()};
+                    parameterPanel.Children.Add(kernelSizeBox);
+
+                    //Gets the value from the textbox
+                    kernelSizeBox.TextChanged += (_,_) =>
+                    {
+                        if(int.TryParse(kernelSizeBox.Text, out int value))
+                        {
+                            //Makes sure that the kernelsize is odd by rounding up
+                            if (value % 2 == 0) {kernelSize = value + 1;}
+                            else{kernelSize = value;}
+                        }
+                    };
+                    break;
+
+                case Task1.SigmaValue: 
+                //should only be available when gaussian filter is selected
+                    parameterPanel.Children.Clear();
+                    if (filterType == 0){
+                        var sigmaValueBox = new TextBox{Width = 100, Text = sigmaValue.ToString()};
+                        parameterPanel.Children.Add(sigmaValueBox);
+                        sigmaValueBox.TextChanged += (_,_) => {
+                            if(float.TryParse(sigmaValueBox.Text, out float i)){
+                                sigmaValue = i;}};
+                    }
+                    else{
+                        //Makes value of sigma null to ensure it will not be used
+                        var warning = new TextBlock{Text="UNAVAILABLE"};
+                        sigmaValue = -1;
+                        parameterPanel.Children.Add(warning);}
+                    break;
+
+                case Task1.Threshold:
+                //this is for edge detecting
+                    parameterPanel.Children.Clear();
+                    var thresholdBox = new TextBox{Width = 100, Text = threshold.ToString()};
+                    parameterPanel.Children.Add(thresholdBox);
+
+                    thresholdBox.TextChanged += (_,_) =>{
+                        if(float.TryParse(thresholdBox.Text, out float value)){
+                            threshold = value;}};
+                    break;
+            }
+        }
         /// <summary>
         /// Dispatches the selected image processing operation on a background task
         /// to keep the UI responsive during heavy computations.
@@ -214,7 +306,7 @@ namespace ImageApp
                             gray = AdjustContrast(gray);
                             break;
                         case ProcessingFunctions.ConvolveImage:
-                            gray = ConvolveImage(gray, CreateGaussianFilter(13, 5.0f));
+                            gray = ConvolveImage(gray, CreateGaussianFilter(13));
                             break;
                         case ProcessingFunctions.MedianFilter:
                             gray = MedianFilter(gray, 5);
@@ -395,7 +487,7 @@ namespace ImageApp
         /// <param name="size">Kernel dimension (odd integer, e.g. 3, 5, 7).</param>
         /// <param name="sigma">Gaussian standard deviation parameter.</param>
         /// <returns>A 2D float array representing the normalized filter kernel.</returns>
-        private float[,] CreateGaussianFilter(byte size, float sigma)
+        private float[,] CreateGaussianFilter(byte size)
         {
             if (size < 1 || size % 2 == 0)
                 throw new ArgumentException("Kernel size must be a positive odd integer", nameof(size));
@@ -405,7 +497,7 @@ namespace ImageApp
             
             //calculates the center based on the input size
             int center = size / 2;
-            float sigSquared = 2 * (sigma * sigma);
+            float sigSquared = 2 * (sigmaValue * sigmaValue);
             
             //setup for the normalization
             float sum = 0;
