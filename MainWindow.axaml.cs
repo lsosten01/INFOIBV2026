@@ -223,7 +223,9 @@ namespace ImageApp
                         if(int.TryParse(kernelSizeBox.Text, out int value))
                         {
                             //Makes sure that the kernelsize is odd by rounding up
-                            if (value % 2 == 0) {kernelSize = value + 1;}
+                            if (value % 2 == 0) {
+                                kernelSize = value + 1;
+                                }
                             else{kernelSize = value;}
                         }
                     };
@@ -306,7 +308,7 @@ namespace ImageApp
                             gray = AdjustContrast(gray);
                             break;
                         case ProcessingFunctions.ConvolveImage:
-                            gray = ConvolveImage(gray, CreateGaussianFilter(13));
+                            gray = ConvolveImage(gray, CreateGaussianFilter());
                             break;
                         case ProcessingFunctions.MedianFilter:
                             gray = MedianFilter(gray, 5);
@@ -487,24 +489,24 @@ namespace ImageApp
         /// <param name="size">Kernel dimension (odd integer, e.g. 3, 5, 7).</param>
         /// <param name="sigma">Gaussian standard deviation parameter.</param>
         /// <returns>A 2D float array representing the normalized filter kernel.</returns>
-        private float[,] CreateGaussianFilter(byte size)
+        private float[,] CreateGaussianFilter()
         {
-            if (size < 1 || size % 2 == 0)
-                throw new ArgumentException("Kernel size must be a positive odd integer", nameof(size));
+            if (kernelSize < 1 || kernelSize % 2 == 0)
+                throw new ArgumentException("Kernel size must be a positive odd integer", nameof(kernelSize));
             
             // create the filter
-            float[,] filter = new float[size, size];
+            float[,] filter = new float[kernelSize, kernelSize];
             
             //calculates the center based on the input size
-            int center = size / 2;
+            int center = kernelSize / 2;
             float sigSquared = 2 * (sigmaValue * sigmaValue);
             
             //setup for the normalization
             float sum = 0;
             
             //loop through given size
-            for (int x = 0; x < size; x++)
-            for (int y = 0; y < size; y++)
+            for (int x = 0; x < kernelSize; x++)
+            for (int y = 0; y < kernelSize; y++)
             {
                 //distance from pixel coordinate to center
                 float dx = x - center;
@@ -521,8 +523,8 @@ namespace ImageApp
             }
             
             // normalizes the value in the filter matrix by dividing the assigned coordinate with the sum of g-values
-            for(int x = 0; x < size; x++)
-            for (int y = 0; y < size; y++)
+            for(int x = 0; x < kernelSize; x++)
+            for (int y = 0; y < kernelSize; y++)
                 filter[x, y] /= sum;
             
             return filter;
@@ -541,8 +543,8 @@ namespace ImageApp
             int iH = inputImage.GetLength(1);
             
             //create dimensions of kernel
-            int kW = kernelSize;
-            int kH = kernelSize;
+            int kW = filter.GetLength(0);
+            int kH = filter.GetLength(1);
             
             //center of kernel
             int centerX = kW / 2;
