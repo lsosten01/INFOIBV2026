@@ -54,7 +54,7 @@ namespace ImageApp
             Median,
         }
 
-        private int kernelSize = 0;
+        private int kernelSize = 9;
         private float sigmaValue = 1.0f;
         private float threshold = 0;
         private int filterType = 0;
@@ -541,8 +541,8 @@ namespace ImageApp
             int iH = inputImage.GetLength(1);
             
             //create dimensions of kernel
-            int kW = filter.GetLength(0);
-            int kH = filter.GetLength(1);
+            int kW = kernelSize;
+            int kH = kernelSize;
             
             //center of kernel
             int centerX = kW / 2;
