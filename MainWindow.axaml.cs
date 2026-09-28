@@ -55,8 +55,8 @@ namespace ImageApp
         }
 
         private int kernelSize = 9;
-        private float sigmaValue = 1.0f;
-        private float threshold = 0;
+        private float sigmaValue = 3.0f;
+        private float threshold = 110;
         private int filterType = 0;
 
         public MainWindow()
@@ -256,7 +256,17 @@ namespace ImageApp
 
                     thresholdBox.TextChanged += (_,_) =>{
                         if(float.TryParse(thresholdBox.Text, out float value)){
-                            threshold = value;}};
+                            if(threshold > 255)
+                            {
+                                threshold = 255;
+                            }
+                            if (threshold < 0)
+                            {
+                                threshold = 0;
+                            }
+                            else{
+                                threshold = value;}};
+                            };
                     break;
             }
         }
@@ -308,10 +318,16 @@ namespace ImageApp
                             gray = AdjustContrast(gray);
                             break;
                         case ProcessingFunctions.ConvolveImage:
-                            gray = ConvolveImage(gray, CreateGaussianFilter());
+                            if(filterType == 0){
+                            gray = ConvolveImage(gray, CreateGaussianFilter());}
+                            else{
+                                StatusText.Text = "WARNING! Median filter selected, image not processed.";}
                             break;
                         case ProcessingFunctions.MedianFilter:
-                            gray = MedianFilter(gray, 5);
+                            if(filterType == 1){
+                            gray = MedianFilter(gray, 5);}
+                            else{
+                                StatusText.Text = "WARNING! Gaussian filter selected, image not processed.";}
                             break;
                         case ProcessingFunctions.EdgeMagnitude:
                         {
@@ -321,7 +337,7 @@ namespace ImageApp
                             break;
                         }
                         case ProcessingFunctions.ThresholdImage:
-                            gray = ThresholdImage(gray, _threshold);
+                            gray = ThresholdImage(gray);
                             break;
 
                         case ProcessingFunctions.BinaryErodeImage:
@@ -622,7 +638,7 @@ namespace ImageApp
         /// <param name="inputImage">The 2D input grayscale image.</param>
         /// <param name="threshold">Intensity threshold cutoff value in [0, 255].</param>
         /// <returns>A binary image represented as byte intensities (e.g. 0 and 255).</returns>
-        private byte[,] ThresholdImage(byte[,] inputImage, byte threshold)
+        private byte[,] ThresholdImage(byte[,] inputImage)
         {
             // create temporary grayscale image
             int w = inputImage.GetLength(0);
@@ -633,13 +649,13 @@ namespace ImageApp
             for (int y = 0; y < h; y++)
             {
                 int val = inputImage[x, y];
-                if (val <= 100)
+                if (val <= threshold)
                 {
-                    threshImage[x, y] = 30;
+                    threshImage[x, y] = 0;
                 }
                 else
                 {
-                    threshImage[x, y] = 170;
+                    threshImage[x, y] = 255;
                 }
                 
             }
