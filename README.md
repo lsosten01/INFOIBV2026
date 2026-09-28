@@ -17,11 +17,11 @@
 - [ ]  Filtering and Edge Detection
   - [ ] Dropdown menu of task 1
   - [ ] GUI input of
-    - [ ] Filter type (Gaussian or Median)
-    - [ ] Kernel size (odd number)
-    - [ ] Sigma value
-    - [ ] Threshold
-  - [ ] Apply results in an image based on
+    - [X] Filter type (Gaussian or Median)
+    - [X] Kernel size (odd number)
+    - [X] Sigma value
+    - [X] Threshold
+  - [X] Apply results in an image based on
     - [ ] filter and size
     - [ ] edge detection
     - [ ] threshold
