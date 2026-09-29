@@ -325,7 +325,7 @@ namespace ImageApp
                             break;
                         case ProcessingFunctions.MedianFilter:
                             if(filterType == 1){
-                            gray = MedianFilter(gray, 5);}
+                            gray = MedianFilter(gray);}
                             else{
                                 StatusText.Text = "WARNING! Gaussian filter selected, image not processed.";}
                             break;
@@ -601,14 +601,47 @@ namespace ImageApp
         /// <param name="inputImage">The 2D input grayscale image.</param>
         /// <param name="kernelSize">The size of the local neighborhood window (odd integer).</param>
         /// <returns>The filtered grayscale image.</returns>
-        private byte[,] MedianFilter(byte[,] inputImage, byte kernelSize)
+        private byte[,] MedianFilter(byte[,] inputImage)
         {
             // create temporary grayscale image
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
-            // TODO: add your functionality and checks, think about border handling
+            //create dimensions of input image 
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+            
+            byte[,] resultImage = new byte[iW, iH];
 
-            return tempImage;
+            //center of kernel
+            int center = kernelSize / 2;
+
+            for(int u = 0; u < iW; u++)
+            for(int v= 0; v < iH; v++)
+            {
+                List<byte> kernelList = new List<byte>();
+                for(int i = -center; i < center; i++)
+                for(int j = -center; j < center; j++)
+                {
+                    int xOffset = u + i;
+                    int yOffset = v + j;
+                    //fix the border control
+                    if (xOffset >= 0 && xOffset < iW)
+                            {
+                                if(yOffset >= 0 && yOffset < iH)
+                                {
+                                    byte kernelByte = inputImage[xOffset,yOffset];
+                                    kernelList.Add(kernelByte);
+                                }
+                                else{break;}
+                            }
+                }
+                if(kernelList.Count != 0){
+                    kernelList.Sort();
+                    byte median = kernelList[kernelList.Count/2];
+                    resultImage[u,v] = median;
+                }
+            }
+            return resultImage;
         }
 
         /// <summary>
