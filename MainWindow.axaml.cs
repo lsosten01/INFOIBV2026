@@ -331,8 +331,18 @@ namespace ImageApp
                             break;
                         case ProcessingFunctions.EdgeMagnitude:
                         {
-                            sbyte[,] horizontalKernel = null; // Define this kernel yourself
-                            sbyte[,] verticalKernel = null; // Define this kernel yourself
+                            sbyte[,] horizontalKernel =
+                                {
+                                    {-1, 0, 1},
+                                    {-2, 0, 2},
+                                    {-1, 0, 1}
+                                }; 
+                            sbyte[,] verticalKernel =
+                                {
+                                    {-1, -2, -1},
+                                    {0, 0, 0},
+                                    {1, 2, 1}
+                                };
                             gray = EdgeMagnitude(gray, horizontalKernel, verticalKernel);
                             break;
                         }
@@ -603,9 +613,6 @@ namespace ImageApp
         /// <returns>The filtered grayscale image.</returns>
         private byte[,] MedianFilter(byte[,] inputImage)
         {
-            // create temporary grayscale image
-            byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-
             //create dimensions of input image 
             int iW = inputImage.GetLength(0);
             int iH = inputImage.GetLength(1);
@@ -624,7 +631,8 @@ namespace ImageApp
                 {
                     int xOffset = u + i;
                     int yOffset = v + j;
-                    //fix the border control
+                    //TO DO: there is a black line currently at the top fix this before turn in
+                    //If pixels are out of bound they do not get added to the list
                     if (xOffset >= 0 && xOffset < iW)
                             {
                                 if(yOffset >= 0 && yOffset < iH)
@@ -661,8 +669,46 @@ namespace ImageApp
             byte[,] tempImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
 
             // TODO: add your functionality and checks, think about border handling and type conversion (negative values!)
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+            int center = 1;
+            byte[,] resultImage = new byte[iW, iH];
 
-            return tempImage;
+            //Loops over the image
+            for(int u = 0; u < iW; u++)
+            for(int v= 0; v < iH; v++)
+            {
+                double dx = 0;
+                double dy = 0;
+                //Loops over kernel positions based on (0,0) center
+                for(int i = -center; i <= center; i++)
+                for(int j = -center; j <= center; j++)
+                {
+                    int xOffset = u + i;
+                    int yOffset = v + j;
+
+                    //perhaps this is a bit ass for border handling hmm
+                    if (xOffset >= 0 && xOffset < iW)
+                    if(yOffset >= 0 && yOffset < iH)
+                        {
+                            dx += horizontalKernel[i + center,j + center] * inputImage[xOffset, yOffset];
+                            dy += verticalKernel[i + center,j + center] * inputImage[xOffset, yOffset];
+                        }
+                    else
+                        {
+                            dx += horizontalKernel[i + center,j + center] * inputImage[u, v];
+                            dy += verticalKernel[i + center,j + center] * inputImage[u, v];
+                        }
+                    
+                }
+                //TO DO: this also fix the comments man
+                //dx /= 8;
+                //dy /= 8;
+                int magnitude = Convert.ToInt32(Math.Round(Math.Sqrt(dx * dx + dy * dy)));
+                resultImage[u, v] = (byte)Math.Clamp(magnitude, 0, 255);
+            }
+
+            return resultImage;
         }
 
         /// <summary>

@@ -7,7 +7,7 @@
 - [X] Contrast adjustment
 - [X] Gaussian filter
 - [X] Linear filtering
-- [ ] Median filtering
+- [X] Median filtering
 - [ ] Edge detection
 - [ ] Binary Erosion/Dilation
 - [ ] Opening/Closing
