@@ -352,14 +352,23 @@ namespace ImageApp
 
                         case ProcessingFunctions.BinaryErodeImage:
                         {
-                            bool[,] structElem = null; // Define this structuring element yourself
+                            bool[,] structElem =
+                            {
+                                {true, true, true},
+                                {true, true, true},
+                                {true, true, true}
+                            }; // Define this structuring element yourself
                             gray = BinaryErodeImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryDilateImage:
                         {
-                            bool[,] structElem = null; // Define this structuring element yourself
+                            bool[,] structElem = {
+                                {true, true, true},
+                                {true, true, true},
+                                {true, true, true}
+                            }; // Define this structuring element yourself
                             gray = BinaryDilateImage(gray, structElem);
                             break;
                         }
@@ -750,8 +759,52 @@ namespace ImageApp
         /// <returns>The eroded binary image.</returns>
         private byte[,] BinaryErodeImage(byte[,] inputImage, bool[,] structElem)
         {
-            byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            // TODO: implement binary erosion
+            //set output image size
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+            
+            //set structuring element size
+            int kW = structElem.GetLength(0);
+            int kH = structElem.GetLength(1);
+            
+            //set center of structuring element
+            int centerX = kW / 2;
+            int centerY = kH / 2;
+            
+            byte[,] output = new byte[iW, iH];
+            
+            //loops through image
+            for (int u = 0; u < iW; u++)
+            {
+                for (int v = 0; v < iH; v++)
+                {
+                    bool overlap = true;
+                    //loops through structuring element
+                    for (int i = -centerX; i <= centerX; i++)
+                    {
+                        for (int j = -centerY; j <= centerY; j++)
+                        {   
+                            //checks only if foreground
+                            bool foreground = structElem[i + centerX, j + centerY];
+                            if (foreground)
+                            {
+                              int posU = u + i;
+                              int posV = v + j;
+                              
+                              if(posU >= 0 && posU < iW && posV >= 0 && posV < iH)
+                                  if (inputImage[posU, posV] == 0)
+                                      overlap = false;
+                            }
+                            
+                        }
+                    }
+
+                    if (overlap)
+                        output[u, v] = 255;
+                    else
+                        output[u, v] = 0;
+                }
+            }
             return output;
         }
 
@@ -763,8 +816,52 @@ namespace ImageApp
         /// <returns>The dilated binary image.</returns>
         private byte[,] BinaryDilateImage(byte[,] inputImage, bool[,] structElem)
         {
-            byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            // TODO: implement binary dilation
+            //set output image size
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+            
+            //set structuring element size
+            int kW = structElem.GetLength(0);
+            int kH = structElem.GetLength(1);
+            
+            //set center of structuring element
+            int centerX = kW / 2;
+            int centerY = kH / 2;
+            
+            byte[,] output = new byte[iW, iH];
+            
+            //loops through image
+            for (int u = 0; u < iW; u++)
+            {
+                for (int v = 0; v < iH; v++)
+                {
+                    bool overlap = false;
+                    //loops through structuring element
+                    for (int i = -centerX; i <= centerX; i++)
+                    {
+                        for (int j = -centerY; j <= centerY; j++)
+                        {   
+                            //checks only if foreground
+                            bool foreground = structElem[i + centerX, j + centerY];
+                            if (foreground)
+                            {
+                                int posU = u + i;
+                                int posV = v + j;
+                              
+                                if(posU >= 0 && posU < iW && posV >= 0 && posV < iH)
+                                    if (inputImage[posU, posV] == 255)
+                                        overlap = true;
+                            }
+                            
+                        }
+                    }
+
+                    if (overlap)
+                        output[u, v] = 255;
+                    else
+                        output[u, v] = 0;
+                }
+            }
             return output;
         }
 
