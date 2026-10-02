@@ -8,7 +8,7 @@
 - [X] Gaussian filter
 - [X] Linear filtering
 - [X] Median filtering
-- [ ] Edge detection
+- [X] Edge detection
 - [ ] Binary Erosion/Dilation
 - [ ] Opening/Closing
 - [ ] Grayscale Erosion/Dilation
@@ -30,5 +30,6 @@
   - [ ]  ...
 
 ### Choice Tasks
-- [ ]  ...
+- [ ] Histogram Matching
+- [ ] Canny edge detection
 

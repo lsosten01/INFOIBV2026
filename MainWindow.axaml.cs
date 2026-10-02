@@ -1,3 +1,4 @@
+using System.Diagnostics.Metrics;
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -12,6 +13,7 @@ namespace ImageApp
     {
         private WriteableBitmap? _loadedBitmap; // the raw loaded image, kept in color, for display in OriginalImage
         private byte[,,]? _loadedColorPixels; // [x, y, channel] with channel 0=R, 1=G, 2=B -- extracted once at load time
+        private byte[,,]? _referenceColorPixels;
         private byte[,]? _processedGray; // Processed grayscale values (nullable)
 
         // Simple fixed defaults used by the functions below until you add your own
@@ -38,6 +40,7 @@ namespace ImageApp
             BinaryCloseImage,
             GrayscaleErodeImage,
             GrayscaleDilateImage,
+            HistogramMatching,
         }
 
         private enum Task1
@@ -72,15 +75,18 @@ namespace ImageApp
             
         }
 
+        
+
         /// <summary>
         /// Opens a file picker dialog, loads the selected image, and extracts its color pixel data.
         /// </summary>
-        private async void OnLoadImage(object? sender, RoutedEventArgs e)
+        
+        private async Task<byte[,,]?> LoadImagePixels()
         {
             if (!StorageProvider.CanOpen)
             {
                 StatusText.Text = "Opening files is not supported on this system.";
-                return;
+                return null;
             }
 
             try
@@ -96,7 +102,7 @@ namespace ImageApp
 
                 var file = files.FirstOrDefault();
                 if (file == null)
-                    return;
+                    return null;
 
                 await using var stream = await file.OpenReadAsync();
 
@@ -111,7 +117,7 @@ namespace ImageApp
                 _loadedBitmap?.Dispose();
                 _loadedBitmap = new(size, new(96, 96), PixelFormat.Rgba8888, AlphaFormat.Unpremul);
 
-                _loadedColorPixels = new byte[width, height, 3];
+                byte [,,]loadedColorPixels = new byte[width, height, 3];
                 using (var fb = _loadedBitmap.Lock())
                 {
                     decoded.CopyPixels(fb,AlphaFormat.Unpremul);
@@ -127,9 +133,9 @@ namespace ImageApp
                         for (int x = 0; x < width; x++)
                         {
                             int idx = rowStart + x * 4; // 4 bytes per pixel: R, G, B, A
-                            _loadedColorPixels[x, y, 0] = buffer[idx + 0];
-                            _loadedColorPixels[x, y, 1] = buffer[idx + 1];
-                            _loadedColorPixels[x, y, 2] = buffer[idx + 2];
+                            loadedColorPixels[x, y, 0] = buffer[idx + 0];
+                            loadedColorPixels[x, y, 1] = buffer[idx + 1];
+                            loadedColorPixels[x, y, 2] = buffer[idx + 2];
                         }
                     }
                 }
@@ -140,13 +146,24 @@ namespace ImageApp
                 (ProcessedImage.Source as IDisposable)?.Dispose();
                 ProcessedImage.Source = null;
                 StatusText.Text = $"Loaded image ({width} \u00d7 {height} px).";
+                return loadedColorPixels;
             }
             catch (Exception ex)
             {
                 StatusText.Text = $"Failed to load image: {ex.Message}";
+                return null;
             }
         }
 
+        private async void OnLoadImage(object? sender, RoutedEventArgs e)
+        {
+            _loadedColorPixels = await LoadImagePixels();
+        }
+        private async void OnLoadReference(object? sender, RoutedEventArgs e)
+        {
+            //Possible TO DO: change the GUI
+            _referenceColorPixels = await LoadImagePixels();
+        }
         /// <summary>
         /// Saves the current processed grayscale image to disk as a PNG file.
         /// </summary>
@@ -389,6 +406,18 @@ namespace ImageApp
                         {
                             int[,] grayStructElem = null; // Define this structuring element yourself
                             gray = GrayscaleDilateImage(gray, grayStructElem);
+                            break;
+                        }
+
+                        case ProcessingFunctions.HistogramMatching:
+                        {
+                             if (_loadedColorPixels == null)
+                                {
+                                    StatusText.Text = "Please load a reference image first.";
+                                    break;
+                                }
+                            byte[,] refGray = ConvertToGrayscale(_referenceColorPixels);
+                            gray = HistogramMatching(gray, refGray);
                             break;
                         }
 
@@ -818,6 +847,86 @@ namespace ImageApp
             byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
             // TODO: implement grayscale dilation
             return output;
+        }
+
+        private byte[,] HistogramMatching(byte[,] inputImage, byte[,] referenceImage)
+        {
+            byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+
+            //Creates a normalised histogram of both the input image and the reference image
+            SortedDictionary<int, float> normInput = NormalisedHistogram(inputImage);
+            SortedDictionary<int, float> normRef = NormalisedHistogram(referenceImage);            
+
+            //Creates a lookup table
+            SortedDictionary<int, int> lookUp = CreateLookUpTable(normInput, normRef);
+
+            int w = inputImage.GetLength(0);
+            int h = inputImage.GetLength(1);
+            for(int u = 0; u < w; u++)
+            for(int v = 0; v < h; v++)
+                {
+                    byte val = inputImage[u,v];
+                    output[u,v] = (byte)lookUp[(int)val];       
+                }
+            return output;
+        }
+
+
+
+        private static SortedDictionary<int, float> NormalisedHistogram(byte[,] inputImage)
+        {
+            //Creates a histogram
+            SortedDictionary<int,int> histogram = new SortedDictionary<int, int>();
+            //Empy histogram
+            for(int i = 0; i < 256; i++)
+            {
+                histogram[i] = 0;
+            }
+            int w = inputImage.GetLength(0);
+            int h = inputImage.GetLength(1);
+            for(int u = 0; u < w; u++)
+            for(int v = 0; v < h; v++)
+            {
+                histogram[inputImage[u,v]]++;
+            }
+
+            //Creates a cumulative histogram
+            SortedDictionary<int, int> cumHistogram = new SortedDictionary<int, int>();
+            for(int n = 0; n < 256; n++)
+            {
+                int val = 0;
+                for(int m = n; m >= 0; m--)
+                {
+                    val += histogram[m];
+                }
+                cumHistogram[n] = val;
+            }
+
+            //Creates a normalised histogram
+            int size = w * h;
+            SortedDictionary<int,float> normHistogram = new SortedDictionary<int, float>();
+            for(int n = 0; n < 256; n++)
+            {
+                normHistogram[n] = (float)cumHistogram[n]/size;
+            }
+            return normHistogram;
+        }
+
+        private static SortedDictionary<int, int> CreateLookUpTable(SortedDictionary<int, float> original, SortedDictionary<int, float> reference)
+        {
+            SortedDictionary<int, int> lookUp = new SortedDictionary<int, int>();
+            for(int n = 0; n < 256; n++)
+            {
+                for(int m = 0; m < 256; m++)
+                {
+                    if(original[n] <= reference[m])
+                    {
+                        lookUp[n] = m;
+                        break;
+                    }
+                }
+            }
+            return lookUp;
         }
 
         // ====================================================================

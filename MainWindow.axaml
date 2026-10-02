@@ -1,7 +1,7 @@
 <Window xmlns="https://github.com/avaloniaui"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         x:Class="ImageApp.MainWindow"
-        Width="1000" Height="650"
+        Width="1100" Height="650"
         MinWidth="800" MinHeight="500"
         Title="Image Processing Assignment">
 
@@ -39,6 +39,7 @@
     <!-- Controls: Load, Save, Dropdown, Apply -->
     <StackPanel Grid.Row="1" Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
       <Button Content="Load Image" Width="110" Click="OnLoadImage"/>
+      <Button Content="Load Reference" Width="120" Click="OnLoadReference"/>
       <Button Content="Save Image" Width="110" Click="OnSaveImage"/>
       <ComboBox x:Name="OperationBox" Width="240"/>
       <ComboBox x:Name="Task1Box" Width="240" SelectionChanged="OnTask1Changed"/>
