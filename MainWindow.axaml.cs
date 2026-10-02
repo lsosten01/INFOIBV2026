@@ -7,6 +7,7 @@ using Avalonia.Media.Imaging;
 using Avalonia.Platform;
 using Avalonia.Platform.Storage;
 
+
 namespace ImageApp
 {
     public partial class MainWindow : Window
@@ -41,6 +42,9 @@ namespace ImageApp
             GrayscaleErodeImage,
             GrayscaleDilateImage,
             HistogramMatching,
+            CannyEdgeDetection,
+            Task2,
+            Task3,
         }
 
         private enum Task1
@@ -49,6 +53,7 @@ namespace ImageApp
             KernelSize,
             SigmaValue,
             Threshold,
+            StructureElement
         }
 
         private enum FilterType
@@ -61,6 +66,7 @@ namespace ImageApp
         private float sigmaValue = 3.0f;
         private float threshold = 110;
         private int filterType = 0;
+        private int strucElemSize = 3;
 
         public MainWindow()
         {
@@ -161,7 +167,7 @@ namespace ImageApp
         }
         private async void OnLoadReference(object? sender, RoutedEventArgs e)
         {
-            //Possible TO DO: change the GUI
+            //If there is time/energy TO DO: change the GUI
             _referenceColorPixels = await LoadImagePixels();
         }
         /// <summary>
@@ -209,7 +215,7 @@ namespace ImageApp
 
         private async void OnTask1Changed(object? sender, SelectionChangedEventArgs e)
         {
-            var parameterPanel = this.Get<StackPanel>("ParameterPanel");
+            var parameterPanel = this.Get<StackPanel>("TaskOne");
             var selected = Task1Box. SelectedItem;
 
             switch (selected)
@@ -242,6 +248,7 @@ namespace ImageApp
                             //Makes sure that the kernelsize is odd by rounding up
                             if (value % 2 == 0) {
                                 kernelSize = value + 1;
+                                StatusText.Text = $"Value needs to be odd, value changed to {kernelSize}";
                                 }
                             else{kernelSize = value;}
                         }
@@ -276,17 +283,44 @@ namespace ImageApp
                             if(threshold > 255)
                             {
                                 threshold = 255;
+                                StatusText.Text = $"Value needs to be under 255, value changed to 255.";
                             }
                             if (threshold < 0)
                             {
                                 threshold = 0;
+                                StatusText.Text = $"Value needs to be above 0, value changed to 0.";
                             }
                             else{
                                 threshold = value;}};
                             };
                     break;
+
+                case Task1.StructureElement:
+                    parameterPanel.Children.Clear();
+                    var strucElemBox = new TextBox{Width = 100, Text = strucElemSize.ToString()};
+                    parameterPanel.Children.Add(strucElemBox);
+                    //to do
+                    //apparently we have to make it so that task2 and task3 just standard do stuff on an image but i am going 
+                    //to implement this anyways and just make it in such a way that when task 2 or 3 is selected this box will be 
+                    //put so the struc size element can be chosen.
+                    strucElemBox.TextChanged += (_,_) =>
+                    {
+                        if(int.TryParse(strucElemBox.Text, out int value))
+                        {
+                            if (value % 2 == 0){
+                                strucElemSize = value + 1;
+                                StatusText.Text = $"Value needs to be odd, value changed to {strucElemSize}.";}
+                            else{
+                                strucElemSize = value;}
+                        }
+                        else{
+                            //to do do this for the rest too if i have time
+                            StatusText.Text = $"Please input an odd integer value.";}
+                    };
+                    break;
             }
         }
+
         /// <summary>
         /// Dispatches the selected image processing operation on a background task
         /// to keep the UI responsive during heavy computations.
@@ -369,23 +403,16 @@ namespace ImageApp
 
                         case ProcessingFunctions.BinaryErodeImage:
                         {
-                            bool[,] structElem =
-                            {
-                                {true, true, true},
-                                {true, true, true},
-                                {true, true, true}
-                            }; // Define this structuring element yourself
+                            //to do get struc elem from gui
+                            bool[,] structElem = CreateStructureElement();
                             gray = BinaryErodeImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryDilateImage:
                         {
-                            bool[,] structElem = {
-                                {true, true, true},
-                                {true, true, true},
-                                {true, true, true}
-                            }; // Define this structuring element yourself
+                            //to do get struc elem from gui
+                            bool[,] structElem = CreateStructureElement();
                             gray = BinaryDilateImage(gray, structElem);
                             break;
                         }
@@ -615,8 +642,6 @@ namespace ImageApp
             int centerY = kH / 2;
             
             byte[,] resultImage = new byte[iW, iH];
-            
-            // TODO: add your functionality and checks, think about border handling and type conversion
             
             //image loop
             for(int u = 0; u < iW; u++)
@@ -1026,6 +1051,16 @@ namespace ImageApp
             return lookUp;
         }
 
+        private bool [,] CreateStructureElement()
+        {
+            bool [,] strucElement = new bool [strucElemSize, strucElemSize];
+            for(int i = 0; i <= strucElemSize; i++)
+            for(int j = 0; j <= strucElemSize; j++)
+                {
+                    strucElement[i,j] = true;
+                }
+            return strucElement;
+        }
         // ====================================================================
         // ==================== IMAGE <-> BITMAP HELPERS (given) =============
         // ====================================================================

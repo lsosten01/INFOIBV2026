@@ -43,7 +43,7 @@
       <Button Content="Save Image" Width="110" Click="OnSaveImage"/>
       <ComboBox x:Name="OperationBox" Width="240"/>
       <ComboBox x:Name="Task1Box" Width="240" SelectionChanged="OnTask1Changed"/>
-            <StackPanel x:Name= "ParameterPanel" Orientation="Horizontal" Spacing="10"></StackPanel>
+          <StackPanel x:Name= "TaskOne" Orientation="Horizontal" Spacing="10"></StackPanel>
       <Button x:Name="ApplyButton" Content="Apply" Width="100" Click="OnApply"/>
     </StackPanel>
 

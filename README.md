@@ -15,8 +15,8 @@
 
 ### Demonstration and Analysis Task
 - [ ]  Filtering and Edge Detection
-  - [ ] Dropdown menu of task 1
-  - [ ] GUI input of
+  - [X] Dropdown menu of task 1
+  - [X] GUI input of
     - [X] Filter type (Gaussian or Median)
     - [X] Kernel size (odd number)
     - [X] Sigma value
@@ -30,6 +30,6 @@
   - [ ]  ...
 
 ### Choice Tasks
-- [ ] Histogram Matching
+- [X] Histogram Matching
 - [ ] Canny edge detection
 
