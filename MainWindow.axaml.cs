@@ -406,14 +406,23 @@ namespace ImageApp
 
                         case ProcessingFunctions.GrayscaleErodeImage:
                         {
-                            int[,] grayStructElem = null; // Define this structuring element yourself
+                            int[,] grayStructElem =
+                            {
+                                {100, 100, 100},
+                                {100, 100, 100},
+                                {100, 100, 100}
+                            }; // Define this structuring element yourself
                             gray = GrayscaleErodeImage(gray, grayStructElem);
                             break;
                         }
 
                         case ProcessingFunctions.GrayscaleDilateImage:
                         {
-                            int[,] grayStructElem = null; // Define this structuring element yourself
+                            int[,] grayStructElem = {
+                                {100, 100, 100},
+                                {100, 100, 100},
+                                {100, 100, 100}
+                            }; // Define this structuring element yourself
                             gray = GrayscaleDilateImage(gray, grayStructElem);
                             break;
                         }
@@ -928,8 +937,47 @@ namespace ImageApp
         /// <returns>The eroded grayscale image.</returns>
         private byte[,] GrayscaleErodeImage(byte[,] inputImage, int[,] structElem)
         {
-            byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            // TODO: implement grayscale erosion
+            //set output image size
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+            
+            //set structuring element size
+            int kW = structElem.GetLength(0);
+            int kH = structElem.GetLength(1);
+            
+            //set center of structuring element
+            int centerX = kW / 2;
+            int centerY = kH / 2;
+            
+            byte[,] output = new byte[iW, iH];
+            byte min = 0;
+            //loop through image
+            for (int u = 0; u < iW; u++)
+            {
+                for (int v = 0; v < iH; v++)
+                {
+                    byte minVal = 255;
+                    
+                    //loop through structure element
+                    for (int i = -centerX; i <= centerX; i++)
+                    {
+                        for (int j = -centerY; j <= centerY; j++)
+                        {
+                            if (structElem[i + centerX, j + centerY] > 0)
+                            {
+                                int posU = Math.Clamp(u + i, 0, iW - 1);
+                                int posV = Math.Clamp(v + j, 0, iH - 1);
+
+                                byte pixelVal = inputImage[posU, posV];
+                                
+                                if (pixelVal < minVal)
+                                    minVal = pixelVal;
+                            }
+                        }
+                    }
+                    output[u, v] = minVal;
+                }
+            }
             return output;
         }
 
@@ -941,8 +989,47 @@ namespace ImageApp
         /// <returns>The dilated grayscale image.</returns>
         private byte[,] GrayscaleDilateImage(byte[,] inputImage, int[,] structElem)
         {
-            byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            // TODO: implement grayscale dilation
+            //set output image size
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+            
+            //set structuring element size
+            int kW = structElem.GetLength(0);
+            int kH = structElem.GetLength(1);
+            
+            //set center of structuring element
+            int centerX = kW / 2;
+            int centerY = kH / 2;
+            
+            byte[,] output = new byte[iW, iH];
+            byte min = 0;
+            //loop through image
+            for (int u = 0; u < iW; u++)
+            {
+                for (int v = 0; v < iH; v++)
+                {
+                    byte maxVal = 0;
+                    
+                    //loop through structure element
+                    for (int i = -centerX; i <= centerX; i++)
+                    {
+                        for (int j = -centerY; j <= centerY; j++)
+                        {
+                            if (structElem[i + centerX, j + centerY] > 0)
+                            {
+                                int posU = Math.Clamp(u + i, 0, iW - 1);
+                                int posV = Math.Clamp(v + j, 0, iH - 1);
+
+                                byte pixelVal = inputImage[posU, posV];
+                                
+                                if (pixelVal > maxVal)
+                                    maxVal = pixelVal;
+                            }
+                        }
+                    }
+                    output[u, v] = maxVal;
+                }
+            }
             return output;
         }
 
