@@ -419,45 +419,30 @@ namespace ImageApp
 
                         case ProcessingFunctions.BinaryOpenImage:
                         {
-                            bool[,] structElem = {
-                                {true, true, true},
-                                {true, true, true},
-                                {true, true, true}
-                            }; // Define this structuring element yourself
+                            bool[,] structElem = CreateStructureElement();
+                            // Define this structuring element yourself
                             gray = BinaryOpenImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryCloseImage:
                         {
-                            bool[,] structElem = {
-                                {true, true, true},
-                                {true, true, true},
-                                {true, true, true}
-                            }; // Define this structuring element yourself
+                            bool[,] structElem = CreateStructureElement(); // Define this structuring element yourself
                             gray = BinaryCloseImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.GrayscaleErodeImage:
                         {
-                            int[,] grayStructElem =
-                            {
-                                {100, 100, 100},
-                                {100, 100, 100},
-                                {100, 100, 100}
-                            }; // Define this structuring element yourself
+                            int[,] grayStructElem = CreateGrayStructureElement();
+                            // Define this structuring element yourself
                             gray = GrayscaleErodeImage(gray, grayStructElem);
                             break;
                         }
 
                         case ProcessingFunctions.GrayscaleDilateImage:
                         {
-                            int[,] grayStructElem = {
-                                {100, 100, 100},
-                                {100, 100, 100},
-                                {100, 100, 100}
-                            }; // Define this structuring element yourself
+                            int[,] grayStructElem = CreateGrayStructureElement(); // Define this structuring element yourself
                             gray = GrayscaleDilateImage(gray, grayStructElem);
                             break;
                         }
@@ -1166,6 +1151,17 @@ namespace ImageApp
                 {
                     strucElement[i,j] = true;
                 }
+            return strucElement;
+        }
+        
+        private int [,] CreateGrayStructureElement()
+        {
+            int [,] strucElement = new int [strucElemSize, strucElemSize];
+            for(int i = 0; i <= strucElemSize; i++)
+            for(int j = 0; j <= strucElemSize; j++)
+            {
+                strucElement[i,j] = 100;
+            }
             return strucElement;
         }
         // ====================================================================
