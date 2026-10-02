@@ -1146,8 +1146,8 @@ namespace ImageApp
         private bool [,] CreateStructureElement()
         {
             bool [,] strucElement = new bool [strucElemSize, strucElemSize];
-            for(int i = 0; i <= strucElemSize; i++)
-            for(int j = 0; j <= strucElemSize; j++)
+            for(int i = 0; i < strucElemSize; i++)
+            for(int j = 0; j < strucElemSize; j++)
                 {
                     strucElement[i,j] = true;
                 }
@@ -1157,8 +1157,8 @@ namespace ImageApp
         private int [,] CreateGrayStructureElement()
         {
             int [,] strucElement = new int [strucElemSize, strucElemSize];
-            for(int i = 0; i <= strucElemSize; i++)
-            for(int j = 0; j <= strucElemSize; j++)
+            for(int i = 0; i < strucElemSize; i++)
+            for(int j = 0; j < strucElemSize; j++)
             {
                 strucElement[i,j] = 100;
             }
