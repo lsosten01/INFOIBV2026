@@ -320,7 +320,7 @@ namespace ImageApp
                     // operation always starts from the original loaded image, never chained
                     // from a previous Apply's result.
                     byte[,] gray = ConvertToGrayscale(colorPixels);
-
+                    
                     switch (selected)
                     {
                         case ProcessingFunctions.ConvertToGrayscale:
@@ -392,14 +392,22 @@ namespace ImageApp
 
                         case ProcessingFunctions.BinaryOpenImage:
                         {
-                            bool[,] structElem = null; // Define this structuring element yourself
+                            bool[,] structElem = {
+                                {true, true, true},
+                                {true, true, true},
+                                {true, true, true}
+                            }; // Define this structuring element yourself
                             gray = BinaryOpenImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryCloseImage:
                         {
-                            bool[,] structElem = null; // Define this structuring element yourself
+                            bool[,] structElem = {
+                                {true, true, true},
+                                {true, true, true},
+                                {true, true, true}
+                            }; // Define this structuring element yourself
                             gray = BinaryCloseImage(gray, structElem);
                             break;
                         }
@@ -873,7 +881,7 @@ namespace ImageApp
             {
                 for (int v = 0; v < iH; v++)
                 {
-                    bool overlap = false;
+                    bool hit = false;
                     //loops through structuring element
                     for (int i = -centerX; i <= centerX; i++)
                     {
@@ -888,13 +896,13 @@ namespace ImageApp
                               
                                 if(posU >= 0 && posU < iW && posV >= 0 && posV < iH)
                                     if (inputImage[posU, posV] == 255)
-                                        overlap = true;
+                                        hit = true;
                             }
                             
                         }
                     }
 
-                    if (overlap)
+                    if (hit)
                         output[u, v] = 255;
                     else
                         output[u, v] = 0;
@@ -912,7 +920,13 @@ namespace ImageApp
         private byte[,] BinaryOpenImage(byte[,] inputImage, bool[,] structElem)
         {
             byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            // TODO: implement binary opening
+            
+            byte[,] erodedImage = BinaryErodeImage(inputImage, structElem);
+            
+            byte[,] openedImage = BinaryDilateImage(erodedImage, structElem);
+            
+            output = openedImage;
+            
             return output;
         }
 
@@ -925,7 +939,13 @@ namespace ImageApp
         private byte[,] BinaryCloseImage(byte[,] inputImage, bool[,] structElem)
         {
             byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            // TODO: implement binary closing
+            
+            byte[,] erodedImage = BinaryDilateImage(inputImage, structElem);
+            
+            byte[,] closedImage = BinaryErodeImage(erodedImage, structElem);
+            
+            output = closedImage;
+            
             return output;
         }
 
