@@ -42,8 +42,11 @@ namespace ImageApp
             GrayscaleErodeImage,
             GrayscaleDilateImage,
             HistogramMatching,
+            //to do implement
             CannyEdgeDetection,
+            //to do implement
             Task2,
+            //to do implement
             Task3,
         }
 
@@ -280,12 +283,12 @@ namespace ImageApp
 
                     thresholdBox.TextChanged += (_,_) =>{
                         if(float.TryParse(thresholdBox.Text, out float value)){
-                            if(threshold > 255)
+                            if(value > 255)
                             {
                                 threshold = 255;
                                 StatusText.Text = $"Value needs to be under 255, value changed to 255.";
                             }
-                            if (threshold < 0)
+                            if (value < 0)
                             {
                                 threshold = 0;
                                 StatusText.Text = $"Value needs to be above 0, value changed to 0.";
@@ -354,7 +357,7 @@ namespace ImageApp
                     // operation always starts from the original loaded image, never chained
                     // from a previous Apply's result.
                     byte[,] gray = ConvertToGrayscale(colorPixels);
-                    
+
                     switch (selected)
                     {
                         case ProcessingFunctions.ConvertToGrayscale:
@@ -419,23 +422,22 @@ namespace ImageApp
 
                         case ProcessingFunctions.BinaryOpenImage:
                         {
-                            bool[,] structElem = CreateStructureElement();
-                            // Define this structuring element yourself
+                            bool[,] structElem = null; // Define this structuring element yourself
                             gray = BinaryOpenImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryCloseImage:
                         {
-                            bool[,] structElem = CreateStructureElement(); // Define this structuring element yourself
+                            bool[,] structElem = null; // Define this structuring element yourself
                             gray = BinaryCloseImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.GrayscaleErodeImage:
                         {
-                            int[,] grayStructElem = CreateGrayStructureElement();
-                            // Define this structuring element yourself
+                            int[,] grayStructElem = CreateGrayStructureElement(); 
+                             // Define this structuring element yourself
                             gray = GrayscaleErodeImage(gray, grayStructElem);
                             break;
                         }
@@ -449,7 +451,7 @@ namespace ImageApp
 
                         case ProcessingFunctions.HistogramMatching:
                         {
-                             if (_loadedColorPixels == null)
+                             if (_referenceColorPixels == null)
                                 {
                                     StatusText.Text = "Please load a reference image first.";
                                     break;
@@ -652,8 +654,8 @@ namespace ImageApp
                 float sum = 0;
                 
                 //loop over kernel positions based on (0,0) center
-                for(int i = -centerX; i < centerX; i++)
-                for(int j = -centerY; j < centerY; j++)
+                for(int i = -centerX; i <= centerX; i++)
+                for(int j = -centerY; j <= centerY; j++)
                 {
                     //border of the image(u,v) based on the kernel(i,j)
                     int uBorder = Math.Clamp(u + i, 0, iW - 1);
@@ -691,8 +693,8 @@ namespace ImageApp
             for(int v= 0; v < iH; v++)
             {
                 List<byte> kernelList = new List<byte>();
-                for(int i = -center; i < center; i++)
-                for(int j = -center; j < center; j++)
+                for(int i = -center; i <= center; i++)
+                for(int j = -center; j <= center; j++)
                 {
                     int xOffset = u + i;
                     int yOffset = v + j;
@@ -705,7 +707,6 @@ namespace ImageApp
                                     byte kernelByte = inputImage[xOffset,yOffset];
                                     kernelList.Add(kernelByte);
                                 }
-                                else{break;}
                             }
                 }
                 if(kernelList.Count != 0){
@@ -749,26 +750,14 @@ namespace ImageApp
                 for(int i = -center; i <= center; i++)
                 for(int j = -center; j <= center; j++)
                 {
-                    int xOffset = u + i;
-                    int yOffset = v + j;
-
-                    //perhaps this is a bit ass for border handling hmm
-                    if (xOffset >= 0 && xOffset < iW)
-                    if(yOffset >= 0 && yOffset < iH)
-                        {
-                            dx += horizontalKernel[i + center,j + center] * inputImage[xOffset, yOffset];
-                            dy += verticalKernel[i + center,j + center] * inputImage[xOffset, yOffset];
-                        }
-                    else
-                        {
-                            dx += horizontalKernel[i + center,j + center] * inputImage[u, v];
-                            dy += verticalKernel[i + center,j + center] * inputImage[u, v];
-                        }
-                    
+                    int xo = Math.Clamp(u + i, 0, iW -1);
+                    int yo = Math.Clamp(v + j, 0, iH - 1);
+                    dx += horizontalKernel[i + center,j + center] * inputImage[xo, yo];
+                    dy += verticalKernel[i + center,j + center] * inputImage[xo, yo];
                 }
                 //TO DO: this also fix the comments man
-                //dx /= 8;
-                //dy /= 8;
+                dx /= 8;
+                dy /= 8;
                 int magnitude = Convert.ToInt32(Math.Round(Math.Sqrt(dx * dx + dy * dy)));
                 resultImage[u, v] = (byte)Math.Clamp(magnitude, 0, 255);
             }
@@ -930,13 +919,11 @@ namespace ImageApp
         private byte[,] BinaryOpenImage(byte[,] inputImage, bool[,] structElem)
         {
             byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            
             byte[,] erodedImage = BinaryErodeImage(inputImage, structElem);
             
             byte[,] openedImage = BinaryDilateImage(erodedImage, structElem);
             
             output = openedImage;
-            
             return output;
         }
 
@@ -949,7 +936,7 @@ namespace ImageApp
         private byte[,] BinaryCloseImage(byte[,] inputImage, bool[,] structElem)
         {
             byte[,] output = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
-            
+                        
             byte[,] erodedImage = BinaryDilateImage(inputImage, structElem);
             
             byte[,] closedImage = BinaryErodeImage(erodedImage, structElem);
@@ -1080,7 +1067,7 @@ namespace ImageApp
             for(int v = 0; v < h; v++)
                 {
                     byte val = inputImage[u,v];
-                    output[u,v] = (byte)lookUp[(int)val];       
+                    output[u,v] = (byte)lookUp[val];       
                 }
             return output;
         }
@@ -1106,14 +1093,10 @@ namespace ImageApp
 
             //Creates a cumulative histogram
             SortedDictionary<int, int> cumHistogram = new SortedDictionary<int, int>();
-            for(int n = 0; n < 256; n++)
+            cumHistogram[0] = histogram[0];
+            for(int n = 1; n < 256; n++)
             {
-                int val = 0;
-                for(int m = n; m >= 0; m--)
-                {
-                    val += histogram[m];
-                }
-                cumHistogram[n] = val;
+                cumHistogram[n] = cumHistogram[n-1] + histogram[n];
             }
 
             //Creates a normalised histogram
@@ -1153,8 +1136,7 @@ namespace ImageApp
                 }
             return strucElement;
         }
-        
-        private int [,] CreateGrayStructureElement()
+             private int [,] CreateGrayStructureElement()
         {
             int [,] strucElement = new int [strucElemSize, strucElemSize];
             for(int i = 0; i < strucElemSize; i++)
