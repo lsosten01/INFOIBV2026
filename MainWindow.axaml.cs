@@ -1,6 +1,8 @@
 using System.Diagnostics.Metrics;
+using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
 using Avalonia;
+using Avalonia.Automation;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
@@ -16,6 +18,20 @@ namespace ImageApp
         private byte[,,]? _loadedColorPixels; // [x, y, channel] with channel 0=R, 1=G, 2=B -- extracted once at load time
         private byte[,,]? _referenceColorPixels;
         private byte[,]? _processedGray; // Processed grayscale values (nullable)
+        private double[,] _gradientDirection;
+
+        sbyte[,] horizontalKernel =
+                                {
+                                    {-1, 0, 1},
+                                    {-2, 0, 2},
+                                    {-1, 0, 1}
+                                }; 
+        sbyte[,] verticalKernel =
+                                {
+                                    {-1, -2, -1},
+                                    {0, 0, 0},
+                                    {1, 2, 1}
+                                };
 
         // Simple fixed defaults used by the functions below until you add your own
         // GUI controls (TextBoxes, ComboBoxes, etc.) to let the user set these values.
@@ -67,7 +83,7 @@ namespace ImageApp
 
         private int kernelSize = 9;
         private float sigmaValue = 3.0f;
-        private float threshold = 110;
+        private int threshold = 110;
         private int filterType = 0;
         private int strucElemSize = 3;
 
@@ -282,7 +298,7 @@ namespace ImageApp
                     parameterPanel.Children.Add(thresholdBox);
 
                     thresholdBox.TextChanged += (_,_) =>{
-                        if(float.TryParse(thresholdBox.Text, out float value)){
+                        if(int.TryParse(thresholdBox.Text, out int value)){
                             if(value > 255)
                             {
                                 threshold = 255;
@@ -385,23 +401,11 @@ namespace ImageApp
                             break;
                         case ProcessingFunctions.EdgeMagnitude:
                         {
-                            sbyte[,] horizontalKernel =
-                                {
-                                    {-1, 0, 1},
-                                    {-2, 0, 2},
-                                    {-1, 0, 1}
-                                }; 
-                            sbyte[,] verticalKernel =
-                                {
-                                    {-1, -2, -1},
-                                    {0, 0, 0},
-                                    {1, 2, 1}
-                                };
                             gray = EdgeMagnitude(gray, horizontalKernel, verticalKernel);
                             break;
                         }
                         case ProcessingFunctions.ThresholdImage:
-                            gray = ThresholdImage(gray);
+                            gray = ThresholdImage(gray, threshold);
                             break;
 
                         case ProcessingFunctions.BinaryErodeImage:
@@ -458,6 +462,12 @@ namespace ImageApp
                                 }
                             byte[,] refGray = ConvertToGrayscale(_referenceColorPixels);
                             gray = HistogramMatching(gray, refGray);
+                            break;
+                        }
+
+                        case ProcessingFunctions.CannyEdgeDetection:
+                        {
+                            gray = CannyEdgeDetection(gray);
                             break;
                         }
 
@@ -739,6 +749,7 @@ namespace ImageApp
             int iH = inputImage.GetLength(1);
             int center = 1;
             byte[,] resultImage = new byte[iW, iH];
+            _gradientDirection = new double[iW,iH];
 
             //Loops over the image
             for(int u = 0; u < iW; u++)
@@ -752,14 +763,16 @@ namespace ImageApp
                 {
                     int xo = Math.Clamp(u + i, 0, iW -1);
                     int yo = Math.Clamp(v + j, 0, iH - 1);
-                    dx += horizontalKernel[i + center,j + center] * inputImage[xo, yo];
-                    dy += verticalKernel[i + center,j + center] * inputImage[xo, yo];
+                    dx += horizontalKernel[j + center,i + center] * inputImage[xo, yo];
+                    dy += verticalKernel[j + center,i + center] * inputImage[xo, yo];
                 }
                 //TO DO: this also fix the comments man
-                dx /= 8;
-                dy /= 8;
+                //decide what to do with this because its way too weak with this on
+                //dx /= 8;
+                //dy /= 8;
                 int magnitude = Convert.ToInt32(Math.Round(Math.Sqrt(dx * dx + dy * dy)));
                 resultImage[u, v] = (byte)Math.Clamp(magnitude, 0, 255);
+                _gradientDirection[u,v] = Math.Atan2(dy, dx);
             }
 
             return resultImage;
@@ -771,9 +784,8 @@ namespace ImageApp
         /// <param name="inputImage">The 2D input grayscale image.</param>
         /// <param name="threshold">Intensity threshold cutoff value in [0, 255].</param>
         /// <returns>A binary image represented as byte intensities (e.g. 0 and 255).</returns>
-        private byte[,] ThresholdImage(byte[,] inputImage)
+        private byte[,] ThresholdImage(byte[,] inputImage, int thresh)
         {
-            // create temporary grayscale image
             int w = inputImage.GetLength(0);
             int h = inputImage.GetLength(1);
             
@@ -782,7 +794,7 @@ namespace ImageApp
             for (int y = 0; y < h; y++)
             {
                 int val = inputImage[x, y];
-                if (val <= threshold)
+                if (val <= thresh)
                 {
                     threshImage[x, y] = 0;
                 }
@@ -1145,6 +1157,168 @@ namespace ImageApp
                 strucElement[i,j] = 100;
             }
             return strucElement;
+        }
+
+        
+        private byte[,] CannyEdgeDetection(byte[,] inputImage)
+        {  
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+            byte [,] output = new byte[iW, iH];
+
+            //Sets the sigma value and kernel size to a favourable size for canny edge detection
+            sigmaValue = 1.4f;
+            kernelSize = 5;
+
+            //This is the preprocessing step
+            byte[,] gaussian = ConvolveImage(inputImage, CreateGaussianFilter());
+            byte[,] edgeMagnitude = EdgeMagnitude(gaussian, horizontalKernel, verticalKernel);
+
+            //Non Maximum Supression
+            output = NonMaximumSuppression(edgeMagnitude);
+
+            //Double tresholding
+            int [,] thresholded = DoubleThreshold(output);
+            
+            //Hysteresis Thresholding
+            output = HystereresisThresholding(thresholded);
+
+            return output;
+        }
+
+        private byte [,] NonMaximumSuppression(byte [,] edgeMagnitude)
+        {
+            int iW = edgeMagnitude.GetLength(0);
+            int iH = edgeMagnitude.GetLength(1);
+            byte [,] output = new byte[iW, iH];
+
+            for(int u = 0; u < iW; u++)
+            for(int v = 0; v < iH; v++)
+                {
+                    double angleDeg = _gradientDirection[u,v] * 180.0 / Math.PI;
+                    if (angleDeg < 0){angleDeg+= 180;}
+
+                    //Depending on the angle we want to check different neighbours
+                    if (angleDeg >= 0 && angleDeg < 22.5 || angleDeg >= 157.5)
+                    {
+                        //Left and right neighbour
+                        byte l = edgeMagnitude[Math.Clamp(u - 1, 0, iW- 1),v];
+                        byte m = edgeMagnitude[u,v];
+                        byte r = edgeMagnitude[Math.Clamp(u + 1, 0, iW- 1), v];
+                        if(m >= l && m >= r){output[u,v] = m;}
+                        else{output[u,v] =0;}
+                    }
+                    else if(angleDeg >= 22.5 && angleDeg < 67.5)
+                    {
+                        //Bottom-Right and Top-Left Neighbour
+                        byte tr = edgeMagnitude[Math.Clamp(u + 1, 0, iW- 1), Math.Clamp(v + 1, 0, iH- 1)];
+                        byte m = edgeMagnitude[u,v];
+                        byte bl = edgeMagnitude[Math.Clamp(u - 1, 0, iW- 1), Math.Clamp(v - 1, 0, iH- 1)];
+                        if(m >= tr && m >= bl){output[u,v] = m;}
+                        else{output[u,v] = 0;}
+                    }
+                    else if(angleDeg >= 67.5 && angleDeg < 112.5)
+                    {
+                        //Top and Bottom Neighbour
+                        byte t = edgeMagnitude[u, Math.Clamp(v - 1, 0, iH- 1)];
+                        byte m = edgeMagnitude[u,v];
+                        byte b = edgeMagnitude[u, Math.Clamp(v + 1, 0, iH- 1)];
+                        if(m >= t && m >= b){output[u,v] = m;}
+                        else{output[u,v] = 0;}
+                    }
+                    else if(angleDeg >= 112.5 && angleDeg < 157.5)
+                    {
+                        //Bottom-Left and Top-Right neighbour
+                        byte tl = edgeMagnitude[Math.Clamp(u - 1, 0, iW- 1), Math.Clamp(v + 1, 0, iH- 1)];
+                        byte m = edgeMagnitude[u,v];
+                        byte br = edgeMagnitude[Math.Clamp(u + 1, 0, iW- 1), Math.Clamp(v - 1, 0, iH- 1)];
+                        if(m >= tl && m >= br){output[u,v] = m;}
+                        else{output[u,v] = 0;}
+                    }
+                    else{StatusText.Text = "Well this is strange";}
+                }
+
+            return output;
+        }
+        private int [,] DoubleThreshold(byte [,] localised)
+        {
+            int iW = localised.GetLength(0);
+            int iH = localised.GetLength(1);
+            int [,] thresholded = new int [iW, iH];
+
+            for(int u = 0; u < iW; u++)
+            for(int v = 0; v < iH; v++)
+                {
+                    //0 means no edge, 1 means weak edge, 2 means strong edge
+                    if(localised[u,v] >= 100)
+                    {
+                        thresholded[u,v] = 2;
+                    }
+                    else if(localised[u,v] >= 50)
+                    {
+                        thresholded[u,v] = 1;
+                    }
+                    else{thresholded[u,v] = 0;}
+                }
+            return thresholded;
+        }
+
+        private byte[,] HystereresisThresholding(int [,] input)
+        {
+            int iW = input.GetLength(0);
+            int iH = input.GetLength(1);   
+            byte [,] output = new byte [iW, iH];
+
+            List <(int, int)> locations = [];
+
+            //to do border handling
+            for(int u = 0; u < iW; u++)
+            for(int v = 0; v < iH; v++)
+                {
+                    //2 = Strong edge
+                    if(input[u,v] == 2)
+                    {
+                        output[u,v] = 255;
+                        for(int i = -1; i <= 1; i++)
+                        for(int j = -1; j <= 1; j++)
+                            {
+                                if (input[Math.Clamp(u+i, 0, iW- 1), Math.Clamp(v+j, 0, iH- 1)] == 1)
+                                {
+                                    int x = Math.Clamp(u+i, 0, iW- 1);
+                                    int y = Math.Clamp(v+j, 0, iH- 1);
+                                    List <(int, int)> location = new List<(int, int)> {(x, y)};
+                                    locations.AddRange(Floodfill(input, location, (x, y), iW, iH));
+                                }
+                            }
+                    }
+                    //0 = No edge
+                    else{output[u,v] = 0;}
+                }
+            foreach ((int x, int y) in locations)
+            {
+                output[x,y] = 255;
+            }
+            return output;
+        }
+
+        private List<(int,int)> Floodfill(int [,] input, List<(int, int)> visitedLocations, (int, int) currentLocation, int iW, int iH)
+        {
+            var (u, v) = currentLocation;
+            for(int i = -1; i <= 1; i++)
+            for(int j = -1; j <= 1; j++)
+            {
+                if(i == 0 && j == 0){continue;}
+                
+                int x = Math.Clamp(u+i, 0, iW - 1);
+                int y = Math.Clamp(v+j, 0, iH -1);
+                if(input[x, y] == 1)
+                if(!visitedLocations.Contains((x, y)))
+                    {
+                        visitedLocations.Add((x,y));
+                        Floodfill(input, visitedLocations, (x,y), iW, iH);
+                    }
+            }
+            return visitedLocations;
         }
         // ====================================================================
         // ==================== IMAGE <-> BITMAP HELPERS (given) =============
