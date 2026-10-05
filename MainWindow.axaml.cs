@@ -1,6 +1,7 @@
 using System.Diagnostics.Metrics;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
+using System.Xml;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
@@ -59,7 +60,6 @@ namespace ImageApp
             GrayscaleErodeImage,
             GrayscaleDilateImage,
             HistogramMatching,
-            //to do implement
             CannyEdgeDetection,
             Task1,
             //to do implement
@@ -68,12 +68,14 @@ namespace ImageApp
             Task3,
         }
 
-        private enum Task1
+        private enum Values
         {
             FilterType,
             KernelSize,
             SigmaValue,
             Threshold,
+            HighThreshold,
+            LowThreshold,
             StructureElement
         }
 
@@ -88,17 +90,19 @@ namespace ImageApp
         private int threshold = 110;
         private int filterType = 0;
         private int strucElemSize = 3;
+        private int highThreshold = 110;
+        private int lowThreshold = 50;
 
         public MainWindow()
         {
             InitializeComponent();
-            var task1Box = this.Get<ComboBox>("Task1Box");
+            var valueBox = this.Get<ComboBox>("ValueBox");
 
             OperationBox.ItemsSource = Enum.GetValues<ProcessingFunctions>();
             OperationBox.SelectedIndex = 0; // Select first item by default
 
-            task1Box.ItemsSource = Enum.GetValues<Task1>();
-            task1Box.SelectedIndex = 0;
+            valueBox.ItemsSource = Enum.GetValues<Values>();
+            valueBox.SelectedIndex = 0;
             
         }
 
@@ -234,15 +238,16 @@ namespace ImageApp
             }
         }
 
-        private async void OnTask1Changed(object? sender, SelectionChangedEventArgs e)
+        private async void OnValueChanged(object? sender, SelectionChangedEventArgs e)
         {
-            var parameterPanel = this.Get<StackPanel>("TaskOne");
-            var selected = Task1Box. SelectedItem;
+            var parameterPanel = this.Get<StackPanel>("Box");
+            var valueBox = this.Get<ComboBox>("ValueBox");
+            var selected = valueBox. SelectedItem;
 
             switch (selected)
             {
                 //put the numbers where they should be
-                case Task1.FilterType:
+                case Values.FilterType:
                     parameterPanel.Children.Clear();
                     
                     //Creates a combobox
@@ -256,7 +261,7 @@ namespace ImageApp
 };
                     break;
 
-                case Task1.KernelSize:
+                case Values.KernelSize:
                     parameterPanel.Children.Clear();
                     var kernelSizeBox = new TextBox{Width = 100, Text = kernelSize.ToString()};
                     parameterPanel.Children.Add(kernelSizeBox);
@@ -276,24 +281,30 @@ namespace ImageApp
                     };
                     break;
 
-                case Task1.SigmaValue: 
+                case Values.SigmaValue: 
                 //should only be available when gaussian filter is selected
                     parameterPanel.Children.Clear();
                     if (filterType == 0){
                         var sigmaValueBox = new TextBox{Width = 100, Text = sigmaValue.ToString()};
                         parameterPanel.Children.Add(sigmaValueBox);
                         sigmaValueBox.TextChanged += (_,_) => {
-                            if(float.TryParse(sigmaValueBox.Text, out float i)){
-                                sigmaValue = i;}};
+                            if(float.TryParse(sigmaValueBox.Text, out float i))
+                            {
+                                if(i < 0)
+                                {
+                                    sigmaValue = Math.Abs(i);
+                                    StatusText.Text = $"Negative value inputed, value changed to {sigmaValue}";
+                                }
+                                else{sigmaValue = i;}
+                        }};
                     }
                     else{
                         //Makes value of sigma null to ensure it will not be used
                         var warning = new TextBlock{Text="UNAVAILABLE"};
-                        sigmaValue = -1;
                         parameterPanel.Children.Add(warning);}
                     break;
 
-                case Task1.Threshold:
+                case Values.Threshold:
                 //this is for edge detecting
                     parameterPanel.Children.Clear();
                     var thresholdBox = new TextBox{Width = 100, Text = threshold.ToString()};
@@ -306,7 +317,7 @@ namespace ImageApp
                                 threshold = 255;
                                 StatusText.Text = $"Value needs to be under 255, value changed to 255.";
                             }
-                            if (value < 0)
+                            else if (value < 0)
                             {
                                 threshold = 0;
                                 StatusText.Text = $"Value needs to be above 0, value changed to 0.";
@@ -316,14 +327,64 @@ namespace ImageApp
                             };
                     break;
 
-                case Task1.StructureElement:
+                case Values.HighThreshold:
+                    parameterPanel.Children.Clear();
+                    var highThresholdBox = new TextBox{Width = 100, Text = highThreshold.ToString()};
+                    parameterPanel.Children.Add(highThresholdBox);
+
+                    highThresholdBox.TextChanged += (_,_) =>
+                    {
+                        if(int.TryParse(highThresholdBox.Text, out int value))
+                        {
+                            if(value > 255 || value < 0)
+                            {
+                                value = Math.Clamp(value, 0, 255);
+                                highThreshold = value;
+                                StatusText.Text = $"Value outside of 0-255 value clamped to {value}";
+                            }
+                            else
+                            {
+                                highThreshold = value;
+                            }
+                        }
+                        else
+                        {
+                            StatusText.Text = $"Please input an integer value between 0 and 255.";
+                        }
+                    };
+                break;
+
+                case Values.LowThreshold:
+                    parameterPanel.Children.Clear();
+                    var lowThresholdBox = new TextBox{Width = 100, Text = lowThreshold.ToString()};
+                    parameterPanel.Children.Add(lowThresholdBox);
+
+                    lowThresholdBox.TextChanged += (_,_) =>
+                    {
+                        if(int.TryParse(lowThresholdBox.Text, out int value))
+                        {
+                            if(value > 255 || value < 0)
+                            {
+                                value = Math.Clamp(value, 0, 255);
+                                lowThreshold = value;
+                                StatusText.Text = $"Value outside of 0-255 value clamped to {value}";
+                            }
+                            else
+                            {
+                                lowThreshold = value;
+                            }
+                        }
+                        else
+                        {
+                            StatusText.Text = $"Please input an integer value between 0 and 255.";
+                        }
+                    };
+                break;
+
+                case Values.StructureElement:
                     parameterPanel.Children.Clear();
                     var strucElemBox = new TextBox{Width = 100, Text = strucElemSize.ToString()};
                     parameterPanel.Children.Add(strucElemBox);
-                    //to do
-                    //apparently we have to make it so that task2 and task3 just standard do stuff on an image but i am going 
-                    //to implement this anyways and just make it in such a way that when task 2 or 3 is selected this box will be 
-                    //put so the struc size element can be chosen.
                     strucElemBox.TextChanged += (_,_) =>
                     {
                         if(int.TryParse(strucElemBox.Text, out int value))
@@ -335,7 +396,6 @@ namespace ImageApp
                                 strucElemSize = value;}
                         }
                         else{
-                            //to do do this for the rest too if i have time
                             StatusText.Text = $"Please input an odd integer value.";}
                     };
                     break;
@@ -412,7 +472,6 @@ namespace ImageApp
 
                         case ProcessingFunctions.BinaryErodeImage:
                         {
-                            //to do get struc elem from gui
                             bool[,] structElem = CreateStructureElement();
                             gray = BinaryErodeImage(gray, structElem);
                             break;
@@ -420,7 +479,6 @@ namespace ImageApp
 
                         case ProcessingFunctions.BinaryDilateImage:
                         {
-                            //to do get struc elem from gui
                             bool[,] structElem = CreateStructureElement();
                             gray = BinaryDilateImage(gray, structElem);
                             break;
@@ -437,7 +495,6 @@ namespace ImageApp
                         {
                             bool[,] structElem = CreateStructureElement(); // Define this structuring element yourself
                             gray = BinaryCloseImage(gray, structElem);
-                            int _foregroundPixels = ForegroundPixels(gray);
                             break;
                         }
 
@@ -478,6 +535,15 @@ namespace ImageApp
                             gray = CreateTask1(gray, filterType, kernelSize, horizontalKernel, verticalKernel, threshold);
                             break;
 
+                        case ProcessingFunctions.Task2:
+                            
+                            gray = CreateTask2(gray);
+                            break;
+                        
+                        case ProcessingFunctions.Task3:
+                            gray = CreateTask3(gray);
+                            break;
+
                         default:
                             throw new NotSupportedException($"Operation '{selected}' is not implemented in the OnApply switch.");
                     }
@@ -489,10 +555,14 @@ namespace ImageApp
                 _processedGray = resultGray;
                 (ProcessedImage.Source as IDisposable)?.Dispose();
                 ProcessedImage.Source = resultBmp;
-                StatusText.Text = $"Completed {selected}.";
                 if (_foregroundPixels != 0)
                 {
                     StatusText.Text = $"There are {_foregroundPixels} foreground pixels.";
+                    _foregroundPixels = 0;
+                }
+                else
+                {
+                    StatusText.Text = $"Completed {selected}.";
                 }
             }
             catch (Exception ex)
@@ -719,7 +789,6 @@ namespace ImageApp
                 {
                     int xOffset = u + i;
                     int yOffset = v + j;
-                    //TO DO: there is a black line currently at the top fix this before turn in
                     //If pixels are out of bound they do not get added to the list
                     if (xOffset >= 0 && xOffset < iW)
                             {
@@ -777,10 +846,6 @@ namespace ImageApp
                     dx += horizontalKernel[j + center,i + center] * inputImage[xo, yo];
                     dy += verticalKernel[j + center,i + center] * inputImage[xo, yo];
                 }
-                //TO DO: this also fix the comments man
-                //decide what to do with this because its way too weak with this on
-                //dx /= 8;
-                //dy /= 8;
                 int magnitude = Convert.ToInt32(Math.Round(Math.Sqrt(dx * dx + dy * dy)));
                 resultImage[u, v] = (byte)Math.Clamp(magnitude, 0, 255);
                 _gradientDirection[u,v] = Math.Atan2(dy, dx);
@@ -965,6 +1030,7 @@ namespace ImageApp
             byte[,] closedImage = BinaryErodeImage(erodedImage, structElem);
             
             output = closedImage;
+            _foregroundPixels = ForegroundPixels(output);
             
             return output;
         }
@@ -1177,10 +1243,6 @@ namespace ImageApp
             int iH = inputImage.GetLength(1);
             byte [,] output = new byte[iW, iH];
 
-            //Sets the sigma value and kernel size to a favourable size for canny edge detection
-            sigmaValue = 1.4f;
-            kernelSize = 5;
-
             //This is the preprocessing step
             byte[,] gaussian = ConvolveImage(inputImage, CreateGaussianFilter());
             byte[,] edgeMagnitude = EdgeMagnitude(gaussian, horizontalKernel, verticalKernel);
@@ -1246,7 +1308,6 @@ namespace ImageApp
                         if(m >= tl && m >= br){output[u,v] = m;}
                         else{output[u,v] = 0;}
                     }
-                    else{StatusText.Text = "Well this is strange";}
                 }
 
             return output;
@@ -1261,11 +1322,11 @@ namespace ImageApp
             for(int v = 0; v < iH; v++)
                 {
                     //0 means no edge, 1 means weak edge, 2 means strong edge
-                    if(localised[u,v] >= 100)
+                    if(localised[u,v] >= highThreshold)
                     {
                         thresholded[u,v] = 2;
                     }
-                    else if(localised[u,v] >= 50)
+                    else if(localised[u,v] >= lowThreshold)
                     {
                         thresholded[u,v] = 1;
                     }
@@ -1282,7 +1343,6 @@ namespace ImageApp
 
             List <(int, int)> locations = [];
 
-            //to do border handling
             for(int u = 0; u < iW; u++)
             for(int v = 0; v < iH; v++)
                 {
@@ -1350,7 +1410,22 @@ namespace ImageApp
             return binaryOutput;
             
         }
+
+        private byte [,] CreateTask2(byte[,] inputImage)
+        {
+            byte [,] output = AdjustContrast(inputImage);
+            int [,] strucElem = CreateGrayStructureElement();
+            output = GrayscaleErodeImage(output, strucElem);
+            return output;
+        }
         
+        private byte [,] CreateTask3(byte [,] inputImage)
+        {
+            bool [,] strucElem = CreateStructureElement();
+            byte [,] output = BinaryCloseImage(inputImage, strucElem);
+            return output;
+
+        }
         
         private int ForegroundPixels(byte [,] image)
         {
