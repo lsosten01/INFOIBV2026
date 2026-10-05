@@ -435,6 +435,7 @@ namespace ImageApp
                         {
                             bool[,] structElem = null; // Define this structuring element yourself
                             gray = BinaryCloseImage(gray, structElem);
+                            ForegroundPixels(gray);
                             break;
                         }
 
@@ -1319,6 +1320,23 @@ namespace ImageApp
                     }
             }
             return visitedLocations;
+        }
+        
+        private void ForegroundPixels(byte [,] image)
+        {
+            int foregroundPixels = 0;
+            int iW = image.GetLength(0);
+            int iH = image.GetLength(1);
+
+            for (int u = 0; u < iW; u++)
+            for (int v = 0; v < iH; v++)
+                {
+                    if(image[u,v] == 255)
+                    {
+                        foregroundPixels += 1;
+                    }
+                }
+            StatusText.Text = $"There are {foregroundPixels} foreground pixels.";
         }
         // ====================================================================
         // ==================== IMAGE <-> BITMAP HELPERS (given) =============
