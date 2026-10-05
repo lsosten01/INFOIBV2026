@@ -60,6 +60,7 @@ namespace ImageApp
             HistogramMatching,
             //to do implement
             CannyEdgeDetection,
+            Task1,
             //to do implement
             Task2,
             //to do implement
@@ -426,14 +427,14 @@ namespace ImageApp
 
                         case ProcessingFunctions.BinaryOpenImage:
                         {
-                            bool[,] structElem = null; // Define this structuring element yourself
+                            bool[,] structElem = CreateStructureElement(); // Define this structuring element yourself
                             gray = BinaryOpenImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryCloseImage:
                         {
-                            bool[,] structElem = null; // Define this structuring element yourself
+                            bool[,] structElem = CreateStructureElement(); // Define this structuring element yourself
                             gray = BinaryCloseImage(gray, structElem);
                             break;
                         }
@@ -470,6 +471,10 @@ namespace ImageApp
                             gray = CannyEdgeDetection(gray);
                             break;
                         }
+                        
+                        case ProcessingFunctions.Task1:
+                            gray = CreateTask1(gray, filterType, kernelSize, horizontalKernel, verticalKernel, threshold);
+                            break;
 
                         default:
                             throw new NotSupportedException($"Operation '{selected}' is not implemented in the OnApply switch.");
@@ -1320,6 +1325,26 @@ namespace ImageApp
             }
             return visitedLocations;
         }
+        
+        private byte[,] CreateTask1(byte[,] inputImage, int filterType, int kernelSize, sbyte[,] horizontalkernel, sbyte[,] verticalkernel, int threshold)
+        { 
+            byte[,] smoothedImage; 
+
+            if (filterType == 0) 
+            { 
+                float[,] gaussianKernel = CreateGaussianFilter(); 
+                smoothedImage = ConvolveImage(inputImage, gaussianKernel); 
+            }
+            else 
+            { 
+                smoothedImage = MedianFilter(inputImage); 
+            }
+            byte[,] edgeImage = EdgeMagnitude(smoothedImage, horizontalkernel, verticalkernel); 
+            byte[,] binaryOutput = ThresholdImage(edgeImage, threshold); 
+            return binaryOutput;
+            
+        }
+        
         // ====================================================================
         // ==================== IMAGE <-> BITMAP HELPERS (given) =============
         // ====================================================================
