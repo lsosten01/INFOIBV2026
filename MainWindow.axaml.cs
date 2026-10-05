@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Diagnostics.Metrics;
 using System.Reflection.Metadata;
 using System.Runtime.InteropServices;
@@ -550,6 +551,7 @@ namespace ImageApp
                     return (gray, bmp);
                 });
 
+                bool runErosionAnalysis = (selected == ProcessingFunctions.Task2);
                 _processedGray = resultGray;
                 (ProcessedImage.Source as IDisposable)?.Dispose();
                 ProcessedImage.Source = resultBmp;
@@ -557,6 +559,15 @@ namespace ImageApp
                 {
                     StatusText.Text = $"There are {_foregroundPixels} foreground pixels.";
                     _foregroundPixels = 0;
+                }
+                else if (runErosionAnalysis)
+                {
+                    int[,] structElem = CreateGrayStructureElement();
+                    byte[,] Ci = GrayscaleErodeImage(resultGray, structElem);
+                    Ci = GrayscaleErodeImage(resultGray, structElem); 
+                    int D = CountDistinctValues(Ci); 
+                    double E = CalculateAverageIntensity(Ci);
+                    StatusText.Text = $"Erosion (D = {D} distinct values, E = {E:F2} avg intensity";
                 }
                 else
                 {
@@ -1441,6 +1452,68 @@ namespace ImageApp
                 }
             return foregroundPixels;
         }
+
+        private int CountDistinctValues(byte[,] image)
+        {
+            int width = image.GetLength(0); 
+            int height = image.GetLength(1); 
+            bool[] seen = new bool[256]; 
+            int count = 0;
+            for (int u = 0; u < width; u++)
+            {
+                for (int v = 0; v < height; v++)
+                {
+                    byte val = image[u, v];
+                    if (!seen[val])
+                    {
+                        seen[val] = true; 
+                        count++;
+                    }
+                }
+            } return count;
+        }
+
+        private double CalculateAverageIntensity(byte[,] image)
+        {
+            int width = image.GetLength(0); 
+            int height = image.GetLength(1); 
+            double sum = 0;
+            for (int u = 0; u < width; u++)
+            {
+                for (int v = 0; v < height; v++)
+                {
+                    sum += image[u, v];
+                }
+            } return sum / (width * height);
+        }
+
+        private int[] AnalyzeDistinctValues(byte[,] inputImage)
+        {
+            int[] sizes = new int[] { 3, 7, 11, 15, 19 }; 
+            int[] D = new int[sizes.Length]; 
+            
+            for (int k = 0; k < sizes.Length; k++) 
+            { 
+                int[,] structElem = CreateGrayStructureElement(); 
+                byte[,] Ci = GrayscaleErodeImage(inputImage, structElem); 
+                D[k] = CountDistinctValues(Ci); 
+            } 
+            return D;
+        }
+
+        private double[] AnalyzeAverageIntensity(byte[,] inputImage)
+        {
+            int[] sizes = new int[] { 3, 7, 11, 15, 19 }; 
+            double[] E = new double[sizes.Length];
+            for (int k = 0; k < sizes.Length; k++)
+            {
+                int[,] structElem = CreateGrayStructureElement(); 
+                byte[,] Ci = GrayscaleErodeImage(inputImage, structElem); 
+                E[k] = CalculateAverageIntensity(Ci);
+            } 
+            return E;
+        }
+
         // ====================================================================
         // ==================== IMAGE <-> BITMAP HELPERS (given) =============
         // ====================================================================
