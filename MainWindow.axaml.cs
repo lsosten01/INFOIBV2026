@@ -62,9 +62,7 @@ namespace ImageApp
             HistogramMatching,
             CannyEdgeDetection,
             Task1,
-            //to do implement
             Task2,
-            //to do implement
             Task3,
         }
 
@@ -192,7 +190,7 @@ namespace ImageApp
         }
         private async void OnLoadReference(object? sender, RoutedEventArgs e)
         {
-            //If there is time/energy TO DO: change the GUI
+            
             _referenceColorPixels = await LoadImagePixels();
         }
         /// <summary>
