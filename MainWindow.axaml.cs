@@ -19,6 +19,7 @@ namespace ImageApp
         private byte[,,]? _referenceColorPixels;
         private byte[,]? _processedGray; // Processed grayscale values (nullable)
         private double[,] _gradientDirection;
+        private int _foregroundPixels = 0;
 
         sbyte[,] horizontalKernel =
                                 {
@@ -436,7 +437,7 @@ namespace ImageApp
                         {
                             bool[,] structElem = CreateStructureElement(); // Define this structuring element yourself
                             gray = BinaryCloseImage(gray, structElem);
-                            ForegroundPixels(gray);
+                            int _foregroundPixels = ForegroundPixels(gray);
                             break;
                         }
 
@@ -489,6 +490,10 @@ namespace ImageApp
                 (ProcessedImage.Source as IDisposable)?.Dispose();
                 ProcessedImage.Source = resultBmp;
                 StatusText.Text = $"Completed {selected}.";
+                if (_foregroundPixels != 0)
+                {
+                    StatusText.Text = $"There are {_foregroundPixels} foreground pixels.";
+                }
             }
             catch (Exception ex)
             {
@@ -1347,7 +1352,7 @@ namespace ImageApp
         }
         
         
-        private void ForegroundPixels(byte [,] image)
+        private int ForegroundPixels(byte [,] image)
         {
             int foregroundPixels = 0;
             int iW = image.GetLength(0);
@@ -1361,7 +1366,7 @@ namespace ImageApp
                         foregroundPixels += 1;
                     }
                 }
-            StatusText.Text = $"There are {foregroundPixels} foreground pixels.";
+            return foregroundPixels;
         }
         // ====================================================================
         // ==================== IMAGE <-> BITMAP HELPERS (given) =============
