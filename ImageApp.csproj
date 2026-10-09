@@ -21,4 +21,10 @@
     </PackageReference>
     <PackageReference Include="MathNet.Numerics" Version="5.0.0" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="assignment2.cs">
+      <DependentUpon>MainWindow.axaml</DependentUpon>
+    </Compile>
+  </ItemGroup>
 </Project>
