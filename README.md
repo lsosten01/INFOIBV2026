@@ -9,12 +9,12 @@
 - [X] Linear filtering
 - [X] Median filtering
 - [X] Edge detection
-- [ ] Binary Erosion/Dilation
-- [ ] Opening/Closing
-- [ ] Grayscale Erosion/Dilation
+- [X] Binary Erosion/Dilation
+- [X] Opening/Closing
+- [X] Grayscale Erosion/Dilation
 
 ### Demonstration and Analysis Task
-- [ ]  Filtering and Edge Detection
+- [X]  Filtering and Edge Detection
   - [X] Dropdown menu of task 1
   - [X] GUI input of
     - [X] Filter type (Gaussian or Median)
@@ -31,5 +31,23 @@
 
 ### Choice Tasks
 - [X] Histogram Matching
-- [ ] Canny edge detection
+- [X] Canny edge detection
+
+
+### Assignment 2
+
+### Functions
+- [ ] Sequential region labeling
+- [ ] Hough transform
+- [ ] Hough peak finding
+- [ ] Hough line segments
+
+### Demonstation and Analysis Task
+- [ ] Binary line detection
+- [ ] Grayscale line detection
+- [ ] Implement colour
+
+### Choice tasks 
+- [ ] Floodfill (change it to fit the assignment)
+
 

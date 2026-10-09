@@ -65,6 +65,10 @@ namespace ImageApp
             Task1,
             Task2,
             Task3,
+            SequentialRegionLabeling,
+            HoughTransform,
+            HoughPeakFinding,
+            HoughLineSegments
         }
 
         private enum Values
@@ -542,6 +546,19 @@ namespace ImageApp
                         case ProcessingFunctions.Task3:
                             gray = CreateTask3(gray);
                             break;
+                        
+                        case ProcessingFunctions.SequentialRegionLabeling:
+                            throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
+                            break;
+                        
+                        case ProcessingFunctions.HoughTransform:
+                            throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
+                            break;
+                        
+                        case ProcessingFunctions.HoughLineSegments:
+                            throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
+                            break;
+
 
                         default:
                             throw new NotSupportedException($"Operation '{selected}' is not implemented in the OnApply switch.");
@@ -1513,6 +1530,8 @@ namespace ImageApp
             } 
             return E;
         }
+
+
 
         // ====================================================================
         // ==================== IMAGE <-> BITMAP HELPERS (given) =============
