@@ -91,7 +91,7 @@ namespace ImageApp
         {
             //Second pass this needs to go a bit differently
             //because we need to find all the labels that are connected
-            Dictionary<byte, byte> labelPairs = new Dictionary<byte, byte>();
+            Dictionary<byte, byte> labelSets = new Dictionary<byte, byte>();
 
             for(int u = 0; u < iW; u++)
             for(int v = 0; v < iH; v++)
@@ -108,15 +108,7 @@ namespace ImageApp
                                 byte current = labeledImage[u,v];
                                 if(current != neighbour && neighbour > 0)
                                 {
-                                    //this is still ass but less so so eh
-                                    if (neighbour < current)
-                                    {   
-                                        labelPairs = UpdateDictionary(labelPairs, neighbour, current);
-                                    }
-                                    else
-                                    {
-                                        labelPairs = UpdateDictionary(labelPairs, current, neighbour);
-                                    }
+                                    labelSets = Union(labelSets, neighbour, current);
                                 }
                             }
                     }
@@ -126,52 +118,52 @@ namespace ImageApp
             for(int u = 0; u < iW; u++)
             for(int v = 0; v < iH; v++)
                 {
-                    if(labelPairs.ContainsKey(labeledImage[u,v])){
-                        labeledImage[u,v] = labelPairs[labeledImage[u,v]];
-                    }
-                    else
-                    {
-                        labeledImage[u,v] = 0;
+                    if(labelSets.ContainsKey(labeledImage[u,v])){
+                        labeledImage[u,v] = Find(labeledImage[u,v], labelSets);
                     }
                 }
             
             return labeledImage;
         }
 
-        private static Dictionary<byte, byte> UpdateDictionary (Dictionary<byte, byte> labelPairs, byte lowerVal, byte higherVal)
+        private byte Find(byte x, Dictionary<byte, byte> labelSets)
         {
-            //Adds the current lowest values if they dont exist in the dictionary yet
-            //strilll better way jsdfoh skdjfhsdlkj fhlskdjhgdlkfgzsjhuldkfzgh
-            //lets just think its ok for now lol
+            if(labelSets[x] != x)
+            {
+                labelSets[x] = Find(labelSets[x], labelSets);
+            }
+            return labelSets[x];
+        }
+
+        private Dictionary <byte, byte> Union(Dictionary<byte,byte> labelSets, byte a, byte b)
+        {
             //https://stackoverflow.com/questions/46383172/disjoint-set-implementation-in-c-sharp
             //https://www.geeksforgeeks.org/dsa/introduction-to-disjoint-set-data-structure-or-union-find-algorithm/
-            if(!labelPairs.ContainsKey(lowerVal)){
-                labelPairs.Add(lowerVal, lowerVal);}
-            else if(labelPairs[lowerVal] > lowerVal)
+
+            if (!labelSets.ContainsKey(a)){
+                labelSets[a] = a;}
+
+            if (!labelSets.ContainsKey(b)){
+                labelSets[b] = b;}
+
+            byte rootA = Find(a, labelSets);
+            byte rootB = Find(b, labelSets);
+
+            if(rootA == rootB)
             {
-                labelPairs[labelPairs[lowerVal]] = lowerVal;
-                labelPairs[lowerVal] = lowerVal;
+               return labelSets; 
+            }
+
+            if(rootA < rootB)
+            {
+                labelSets[rootB] = rootA;
             }
             else
             {
-                labelPairs[higherVal] = labelPairs[lowerVal];                              
+                labelSets[rootA] = rootB;
             }
 
-
-            if(!labelPairs.ContainsKey(higherVal)){
-                labelPairs.Add(higherVal, lowerVal);
-            }
-            else if(labelPairs[higherVal] > lowerVal)
-            {
-                labelPairs[labelPairs[higherVal]] = lowerVal;
-                labelPairs[higherVal] = lowerVal;
-            }
-            else
-            {
-                labelPairs[lowerVal] = labelPairs[higherVal];
-            }
-
-
-            return labelPairs;
+            return labelSets;
         }
-}
+
+}         
