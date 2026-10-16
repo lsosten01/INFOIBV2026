@@ -367,6 +367,7 @@ namespace ImageApp
                 //in my test image to show it but idk if they want it so lets make the outercontour thing first
                 //they kinda suggest using a list so i will save the contours in lists where the gray value goes up for every next one
 
+                ///IS CURRENTLY INFINITELY BUSY
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
                 List<((int, int),int)> contourList = new List<((int, int), int)>();
@@ -395,7 +396,7 @@ namespace ImageApp
                 return outputImage;
             }
 
-            public List<((int,int), int)> TraceContour(byte [,] inputImage, (int x, int y) location)
+            private List<((int,int), int)> TraceContour(byte [,] inputImage, (int x, int y) location)
             {
                 //this starts with a FOUND pixel. 
                 List<((int, int), int)> contourList = new List<((int, int), int)>();
@@ -409,18 +410,47 @@ namespace ImageApp
 
                 while (currentPixel != firstPixel && NextLocation(inputImage, currentPixel) != secondPixel)
                 {
-                    
+                    currentPixel = NextLocation(inputImage, currentPixel);
+                    contourList.Add(currentPixel);
                 }
-
-
-
                 
                 return contourList;
             }
 
-            public ((int, int), int) NextLocation(byte[,] inputImage, ((int, int), int) locationAndDirection)
+            Dictionary<int, (int, int)> Directions()
             {
-                return (locationAndDirection);
+               //to do fix this a little lol 
+              Dictionary<int, (int, int)> directions = new Dictionary<int, (int, int)>();
+                directions.Add(0, (1, 0));
+                directions.Add(1, (1, 1));
+                directions.Add(2, (0, 1));
+                directions.Add(3, (-1, 1));
+                directions.Add(4, (-1, 0));
+                directions.Add(5, (-1, -1));
+                directions.Add(6, (0, -1));
+                directions.Add(7, (1, -1));
+                return directions;  
+            }
+            
+
+            private ((int, int), int) NextLocation(byte[,] inputImage, ((int, int), int) locationAndDirection)
+            {
+                Dictionary<int, (int, int)> directions = Directions();
+                var ((x, y), d) = locationAndDirection;
+                var nextLocation = locationAndDirection;
+                
+                for(int steps = 0; steps < 8; steps++)//nooo it needs to go +6 mod 8 so wrap around
+                {
+                    int i = (steps + d) % 8;
+                    var (x1, y1) = directions[i];
+                    if(inputImage[x + x1, y + y1] == 255)
+                    {
+                        nextLocation = ((x+ x1, y + y1), (i + 6) % 8);
+                        continue;
+                    }
+                }
+
+                return nextLocation;
             }
         }
     }
