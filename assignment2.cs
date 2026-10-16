@@ -166,4 +166,42 @@ namespace ImageApp
             return labelSets;
         }
 
+    public byte [,] SLRFloodfill(byte[,] inputImage)
+        {
+            byte label = 1;
+            int iW = inputImage.GetLength(0);
+            int iH = inputImage.GetLength(1);
+
+            for(int u = 0; u < iW; u++)
+            for(int v = 0; v < iH; v++)
+                {
+                    if (inputImage[u,v] == 255)
+                    {   
+                        inputImage = Floodfill_1(inputImage, (u,v), iW, iH, label);
+                        label++;
+                    }
+                }
+            return inputImage;
+        }
+    
+    private byte [,] Floodfill_1(byte [,] input, (int, int) currentLocation, int iW, int iH, byte label)
+        {
+            var (u, v) = currentLocation;
+            input[u,v] = label;
+
+            for(int i = -1; i <= 1; i++)
+            for(int j = -1; j <= 1; j++)
+            {
+                if(i == 0 && j == 0){continue;}
+                int x = u+i;
+                int y = v+j;
+                if(x < 0 || x >= iW || y < 0 || y >= iH){continue;}
+
+                if(input[x, y] == 255)
+                    {
+                        Floodfill_1(input, (x,y), iW, iH,label);
+                    }
+            }
+            return input;
+        }
 }         
