@@ -38,8 +38,10 @@
 
 ### Functions
 - [ ] Sequential region labeling
-- [ ] Hough transform
-- [ ] Hough peak finding
+
+Note: maybe customizable angular and radial step stuff
+- [X] Hough transform
+- [X] Hough peak finding
 - [ ] Hough line segments
 
 ### Demonstation and Analysis Task
