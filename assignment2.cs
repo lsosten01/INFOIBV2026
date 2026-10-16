@@ -176,7 +176,7 @@ namespace ImageApp
                 return labelSets;
             }
             
-            public static byte[,] HoughTransform(byte[,] inputImage, bool isBinary = false)
+            public static byte[,] HoughTransform(byte[,] inputImage, int isBinary = 0)
             {
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
@@ -210,7 +210,7 @@ namespace ImageApp
                         if (inputImage[u, v] > 0)
                         {
                             int weight;
-                            if (isBinary)
+                            if (isBinary == 1)
                                 weight = 1;
                             else
                                 weight = inputImage[u, v];    

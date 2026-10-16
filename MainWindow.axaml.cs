@@ -97,8 +97,8 @@ namespace ImageApp
 
         private enum IsBinary
         {
-            True,
-            False
+            False,
+            True
         }
 
         private int kernelSize = 9;
@@ -578,12 +578,12 @@ namespace ImageApp
                             break;
                         
                         case ProcessingFunctions.HoughTransform:
-                            gray = Assignment2.HoughTransform(gray, false);
+                            gray = Assignment2.HoughTransform(gray, isBinary);
                             break;
                         
                         //Howw to vis??
                         case ProcessingFunctions.HoughPeakFinding:
-                            List<(int, int)> peaks = Assignment2.PeakFinding(Assignment2.HoughTransform(gray, false), 10);
+                            List<(int, int)> peaks = Assignment2.PeakFinding(Assignment2.HoughTransform(gray, isBinary), 10);
                                                 gray = Assignment2.BytePeaks(peaks, 256, 256);
                             break;
                         
