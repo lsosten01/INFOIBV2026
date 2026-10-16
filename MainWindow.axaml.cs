@@ -578,7 +578,7 @@ namespace ImageApp
                             break;
                         
                         case ProcessingFunctions.HoughTransform:
-                            gray = Assignment2.HoughTransform(gray, isBinary);
+                            gray = a2.HoughTransform(gray, isBinary);
                             break;
                         
                         //Howw to vis??

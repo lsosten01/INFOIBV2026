@@ -20,8 +20,9 @@ namespace ImageApp
     public partial class MainWindow : Window
     {
 
-        public class Assignment2{
-
+        public class Assignment2
+        {
+            
             //here comes the sunshine
 
             //for sequential region labeling several steps need to be done
@@ -176,8 +177,13 @@ namespace ImageApp
                 return labelSets;
             }
             
-            public static byte[,] HoughTransform(byte[,] inputImage, int isBinary = 0)
+            public static byte[,] HoughTransform(byte[,] inputImage, int isBinary = 0, sbyte[,] horizontalKernel = null,  sbyte[,] verticalKernel = null)
             {
+                //For customization of binary and grayscale
+                byte[,] filteredImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+                /*if (isBinary == 0)
+                    filteredImage = EdgeMagnitude(inputImage, horizontalKernel, verticalKernel);*/
+                
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
                 
@@ -253,7 +259,7 @@ namespace ImageApp
                 return houghImage;
             }
             
-            //peakfinding related
+            //Hough peakfinding related
             public static List<(int theta, int r)> PeakFinding(byte[,] houghImage, int t_peak)
             {
                 int iw = houghImage.GetLength(0);
@@ -293,6 +299,13 @@ namespace ImageApp
                 }
                 return peaks;
             }
+            
+            //Hough line segments
+            /*private List<(int, int)> HoughLineSegments(byte[,] inputImage, List<(int theta, int r)> peaks, int minThreshold,
+                int minSegLength, int maxGapParam, int isBinary = 0)
+            {
+                byte[,] edgeImage
+            }*/
             
             public static byte[,] BytePeaks(List<(int theta, int r)>peaks, int angularSteps, int radialSteps) 
             {
