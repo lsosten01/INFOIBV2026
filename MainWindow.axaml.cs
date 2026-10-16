@@ -23,6 +23,8 @@ namespace ImageApp
         private double[,] _gradientDirection;
         private int _foregroundPixels = 0;
 
+        Assignment2 a2 = new Assignment2();
+
         sbyte[,] horizontalKernel =
                                 {
                                     {-1, 0, 1},
@@ -68,7 +70,8 @@ namespace ImageApp
             SequentialRegionLabeling,
             HoughTransform,
             HoughPeakFinding,
-            HoughLineSegments
+            HoughLineSegments,
+            Floodfill
         }
 
         private enum Values
@@ -547,21 +550,27 @@ namespace ImageApp
                             break;
                         
                         case ProcessingFunctions.SequentialRegionLabeling:
-                            throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
+                            gray = a2.SequentialRegionLabeling(gray);
+                            gray = AdjustContrast(gray);
                             break;
                         
                         case ProcessingFunctions.HoughTransform:
-                            gray = HoughTransform(gray, false);
+                            gray = Assignment2.HoughTransform(gray, false);
                             break;
                         
                         //Howw to vis??
                         case ProcessingFunctions.HoughPeakFinding:
-                            List<(int, int)> peaks = PeakFinding(HoughTransform(gray, false), 10);
-                                                gray = BytePeaks(peaks, 256, 256);
+                            List<(int, int)> peaks = Assignment2.PeakFinding(Assignment2.HoughTransform(gray, false), 10);
+                                                gray = Assignment2.BytePeaks(peaks, 256, 256);
                             break;
                         
                         case ProcessingFunctions.HoughLineSegments:
                             throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
+                            break;
+
+                        case ProcessingFunctions.Floodfill:
+                            gray = Assignment2.SLRFloodfill(gray);
+                            gray = AdjustContrast(gray);
                             break;
 
 
