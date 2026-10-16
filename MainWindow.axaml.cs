@@ -554,6 +554,12 @@ namespace ImageApp
                             gray = HoughTransform(gray, false);
                             break;
                         
+                        //Howw to vis??
+                        case ProcessingFunctions.HoughPeakFinding:
+                            List<(int, int)> peaks = PeakFinding(HoughTransform(gray, false), 10);
+                                                gray = BytePeaks(peaks, 256, 256);
+                            break;
+                        
                         case ProcessingFunctions.HoughLineSegments:
                             throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
                             break;

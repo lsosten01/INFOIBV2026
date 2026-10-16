@@ -172,7 +172,6 @@ namespace ImageApp
             return labelSets;
         }
         
-        //Hough related
         private byte[,] HoughTransform(byte[,] inputImage, bool isBinary = false)
         {
             int iW = inputImage.GetLength(0);
@@ -249,8 +248,58 @@ namespace ImageApp
             }
             return houghImage;
         }
-
-       
         
+        //peakfinding related
+        private List<(int theta, int r)> PeakFinding(byte[,] houghImage, int t_peak)
+        {
+            int iw = houghImage.GetLength(0);
+            int ih = houghImage.GetLength(1);
+            
+            List<(int theta, int r)> peaks = new List<(int theta, int r)>();
+
+            for (int theta = 1; theta < iw - 1; theta++)
+            {
+                for (int r = 1; r < ih - 1; r++)
+                {
+                    byte currentVal = houghImage[theta, r];
+                    if (houghImage[theta, r] >= t_peak)
+                    {
+                        bool maximum = true;
+
+                        for (int dTheta = -1; dTheta <= 1; dTheta++)
+                        {
+                            for (int dR = -1; dR <= 1; dR++)
+                            {
+                                if (dTheta == 0 && dR == 0) 
+                                    continue;
+                                if (houghImage[theta + dTheta, r + dR] >= currentVal)
+                                {
+                                    maximum = false;
+                                    break;
+                                }
+                            }
+                            if (!maximum) 
+                                break;
+                        }
+                        if (maximum)
+                            peaks.Add((theta, r));
+                    }
+                    
+                }
+            }
+            return peaks;
+        }
+        
+        private byte[,] BytePeaks(List<(int theta, int r)>peaks, int angularSteps, int radialSteps) 
+        {
+          byte[,] peak = new byte[angularSteps, radialSteps];
+
+          foreach (var (theta, r) in peaks)
+          {
+              peak[theta, r] = 255;
+          }
+
+          return peak;
+        }
     }
 }         
