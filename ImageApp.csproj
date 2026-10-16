@@ -26,5 +26,8 @@
     <Compile Update="assignment2.cs">
       <DependentUpon>MainWindow.axaml</DependentUpon>
     </Compile>
+    <Compile Update="assignment1.cs">
+      <DependentUpon>MainWindow.axaml</DependentUpon>
+    </Compile>
   </ItemGroup>
 </Project>
