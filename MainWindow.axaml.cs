@@ -97,8 +97,8 @@ namespace ImageApp
 
         private enum IsBinary
         {
-            True,
-            False
+            False,
+            True
         }
 
         private int kernelSize = 9;
@@ -600,8 +600,7 @@ namespace ImageApp
                             
 
                         case ProcessingFunctions.RegionContours:
-                            throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
-                            //to do
+                            gray = a2.RegionContours(gray);
                             break;
 
                         case ProcessingFunctions.BinaryPipeline:
