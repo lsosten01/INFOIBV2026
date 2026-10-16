@@ -7,6 +7,7 @@ using System.Xml;
 using Avalonia;
 using Avalonia.Automation;
 using Avalonia.Controls;
+using Avalonia.Input;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
 using Avalonia.Platform;
@@ -28,6 +29,9 @@ namespace ImageApp
 
             public byte[,] SequentialRegionLabeling(byte[,] inputImage)
             {
+                //to do
+                //something is wrong with the labelling the colours are darker than if i use the floodfill function
+                //which means something is wrong
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
 
@@ -171,47 +175,6 @@ namespace ImageApp
 
                 return labelSets;
             }
-
-        public static byte [,] SLRFloodfill(byte[,] inputImage)
-            {
-                byte label = 1;
-                int iW = inputImage.GetLength(0);
-                int iH = inputImage.GetLength(1);
-
-                for(int u = 0; u < iW; u++)
-                for(int v = 0; v < iH; v++)
-                    {
-                        if (inputImage[u,v] == 255)
-                        {   
-                            inputImage = Floodfill_1(inputImage, (u,v), iW, iH, label);
-                            label++;
-                        }
-                    }
-                return inputImage;
-            }
-        
-        private static byte [,] Floodfill_1(byte [,] input, (int, int) currentLocation, int iW, int iH, byte label)
-            {
-                //this floodfill crashes the program currently so we need a faster way
-                //https://davdata.nl/math/floodfill-old.html (look into this on the weekend)
-                var (u, v) = currentLocation;
-                input[u,v] = label;
-
-                for(int i = -1; i <= 1; i++)
-                for(int j = -1; j <= 1; j++)
-                {
-                    if(i == 0 && j == 0){continue;}
-                    int x = u+i;
-                    int y = v+j;
-                    if(x < 0 || x >= iW || y < 0 || y >= iH){continue;}
-
-                    if(input[x, y] == 255)
-                        {
-                            Floodfill_1(input, (x,y), iW, iH,label);
-                        }
-                }
-                return input;
-            }
             
             public static byte[,] HoughTransform(byte[,] inputImage, bool isBinary = false)
             {
@@ -341,6 +304,110 @@ namespace ImageApp
             }
 
             return peak;
+            }
+
+        
+            public static byte [,] SLRFloodfill(byte[,] inputImage)
+            {
+                byte label = 1;
+                int iW = inputImage.GetLength(0);
+                int iH = inputImage.GetLength(1);
+
+                for(int u = 0; u < iW; u++)
+                for(int v = 0; v < iH; v++)
+                    {
+                        if (inputImage[u,v] == 255)
+                        {   
+                            inputImage = Floodfill_1(inputImage, (u,v), iW, iH, label);
+                            label++;
+                        }
+                    }
+                return inputImage;
+            }
+        
+            private static byte [,] Floodfill_1(byte [,] input, (int, int) currentLocation, int iW, int iH, byte label)
+            {
+                //this floodfill crashes the program currently so we need a faster way
+                //https://davdata.nl/math/floodfill-old.html (look into this on the weekend)
+                var (u, v) = currentLocation;
+                input[u,v] = label;
+
+                for(int i = -1; i <= 1; i++)
+                for(int j = -1; j <= 1; j++)
+                {
+                    if(i == 0 && j == 0){continue;}
+                    int x = u+i;
+                    int y = v+j;
+                    if(x < 0 || x >= iW || y < 0 || y >= iH){continue;}
+
+                    if(input[x, y] == 255)
+                        {
+                            Floodfill_1(input, (x,y), iW, iH,label);
+                        }
+                }
+                return input;
+            }
+
+            public byte [,] RegionContours(byte [,] inputImage)
+            {
+                //according to this exercise we can pretend the image has one shape only, but I will add several inner contours
+                //in my test image to show it but idk if they want it so lets make the outercontour thing first
+                //they kinda suggest using a list so i will save the contours in lists where the gray value goes up for every next one
+
+                int iW = inputImage.GetLength(0);
+                int iH = inputImage.GetLength(1);
+                List<((int, int),int)> contourList = new List<((int, int), int)>();
+
+                for(int u = 0; u <iW; u++)
+                for(int v = 0; v <iH; v++)
+                    {
+                        //Gives the first pixel that is part of the contour
+                        if(inputImage[u,v] == 255)
+                        {
+                            contourList = TraceContour(inputImage, (u,v));
+                        }
+                    }
+
+                //construct the new image from the contourlist
+                byte[,] outputImage = new byte[iW, iH];
+
+                int contourLength = contourList.Count;
+                int value = 0;
+                foreach(((int x, int y), int _) in contourList)
+                {
+                    outputImage[x,y] = (byte) (1 + (value * 254 / contourLength));
+                    value++;
+                }
+
+                return outputImage;
+            }
+
+            public List<((int,int), int)> TraceContour(byte [,] inputImage, (int x, int y) location)
+            {
+                //this starts with a FOUND pixel. 
+                List<((int, int), int)> contourList = new List<((int, int), int)>();
+                ((int, int), int) firstPixel = (location, 0);
+                contourList.Add(firstPixel);
+                ((int, int), int) secondPixel = NextLocation(inputImage, firstPixel);
+                contourList.Add(secondPixel);
+
+                //Sets the second pixel as the current pixel
+                ((int, int), int) currentPixel = secondPixel;
+
+                while (currentPixel != firstPixel && NextLocation(inputImage, currentPixel) != secondPixel)
+                {
+                    
+                }
+
+
+
+                
+                return contourList;
+            }
+
+            public ((int, int), int) NextLocation(byte[,] inputImage, ((int, int), int) locationAndDirection)
+            {
+                return (locationAndDirection);
             }
         }
     }

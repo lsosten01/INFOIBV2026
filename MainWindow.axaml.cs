@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using System.Xml;
 using Avalonia;
 using Avalonia.Automation;
+using Avalonia.Collections;
 using Avalonia.Controls;
 using Avalonia.Interactivity;
 using Avalonia.Media.Imaging;
@@ -71,7 +72,9 @@ namespace ImageApp
             HoughTransform,
             HoughPeakFinding,
             HoughLineSegments,
-            Floodfill
+            Floodfill,
+            RegionContours,
+            BinaryPipeline
         }
 
         private enum Values
@@ -82,13 +85,20 @@ namespace ImageApp
             Threshold,
             HighThreshold,
             LowThreshold,
-            StructureElement
+            StructureElement,
+            isBinary
         }
 
         private enum FilterType
         {
             Gaussian,
             Median,
+        }
+
+        private enum IsBinary
+        {
+            True,
+            False
         }
 
         private int kernelSize = 9;
@@ -98,6 +108,7 @@ namespace ImageApp
         private int strucElemSize = 3;
         private int highThreshold = 110;
         private int lowThreshold = 50;
+        private int isBinary = 0;
 
         public MainWindow()
         {
@@ -405,6 +416,18 @@ namespace ImageApp
                             StatusText.Text = $"Please input an odd integer value.";}
                     };
                     break;
+
+                case Values.isBinary:
+                    parameterPanel.Children.Clear();
+                    //Creates a combobox
+                    var isBinaryBox = new ComboBox{Width = 100};
+                    isBinaryBox.ItemsSource = Enum.GetValues<IsBinary>();
+                    isBinaryBox.SelectedIndex = isBinary;
+                    parameterPanel.Children.Add(isBinaryBox);
+
+                    isBinaryBox.SelectionChanged += (_,_) =>{
+                        isBinary = isBinaryBox.SelectedIndex;};
+                    break;
             }
         }
 
@@ -569,10 +592,26 @@ namespace ImageApp
                             break;
 
                         case ProcessingFunctions.Floodfill:
+                            throw new NotSupportedException($"Operation '{selected}' is currently unoptimised and crashes the application.");
+                            //to do
                             gray = Assignment2.SLRFloodfill(gray);
                             gray = AdjustContrast(gray);
                             break;
+                            
 
+                        case ProcessingFunctions.RegionContours:
+                            throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
+                            //to do
+                            break;
+
+                        case ProcessingFunctions.BinaryPipeline:
+                            //As the function CannyEdgeDetection gives a binary edge map this function will be used
+                            //(this needs to be made clear in the report) 
+                            //(plus in the report we have now two different thresholds)
+                            gray = CannyEdgeDetection(gray);
+                            gray = Assignment2.HoughTransform(gray);
+                            //to do and now we need to add the red lines and suchhhh
+                            break;
 
                         default:
                             throw new NotSupportedException($"Operation '{selected}' is not implemented in the OnApply switch.");
