@@ -38,7 +38,7 @@
 
 ### Functions
 - [ ] Sequential region labeling
-- [ ] Hough transform
+- [X] Hough transform
 - [ ] Hough peak finding
 - [ ] Hough line segments
 

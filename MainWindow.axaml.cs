@@ -539,7 +539,6 @@ namespace ImageApp
                             break;
 
                         case ProcessingFunctions.Task2:
-                            
                             gray = CreateTask2(gray);
                             break;
                         
@@ -552,7 +551,7 @@ namespace ImageApp
                             break;
                         
                         case ProcessingFunctions.HoughTransform:
-                            throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
+                            gray = HoughTransform(gray, false);
                             break;
                         
                         case ProcessingFunctions.HoughLineSegments:
