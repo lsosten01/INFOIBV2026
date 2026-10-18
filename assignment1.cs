@@ -949,52 +949,7 @@ public partial class MainWindow : Window
             } 
             return E;
         }
-
-
-        // ====================================================================
-        // ==================== IMAGE <-> BITMAP HELPERS (given) =============
-        // ====================================================================
-
-        /// <summary>
-        /// Builds a displayable and savable <see cref="WriteableBitmap"/> from a grayscale byte[,] array
-        /// (replicated into R, G, B; alpha fully opaque), using Avalonia's native imaging APIs.
-        /// </summary>
-        /// <param name="gray">The 2D grayscale byte array.</param>
-        /// <returns>A displayable and savable <see cref="WriteableBitmap"/>.</returns>
-        public WriteableBitmap ByteArrayToBitmap(byte[,] gray)
-        {
-            int w = gray.GetLength(0);
-            int h = gray.GetLength(1);
-            var size = new PixelSize(w, h);
-            var bmp = new WriteableBitmap(
-                size,
-                new(96, 96),
-                PixelFormat.Rgba8888,
-                AlphaFormat.Opaque
-            );
-
-            using var fb = bmp.Lock();
-
-            int totalBytes = fb.RowBytes * h;
-            byte[] buffer = new byte[totalBytes];
-            for (int y = 0; y < h; y++)
-            {
-                int rowStart = y * fb.RowBytes;
-                for (int x = 0; x < w; x++)
-                {
-                    byte val = gray[x, y];
-                    int idx = rowStart + x * 4;
-                    buffer[idx + 0] = val; // R
-                    buffer[idx + 1] = val; // G
-                    buffer[idx + 2] = val; // B
-                    buffer[idx + 3] = 255; // A (fully opaque)
-                }
-            }
-
-            Marshal.Copy(buffer, 0, fb.Address, totalBytes);
-
-            return bmp;
-        }
+        
     }
 }
 
