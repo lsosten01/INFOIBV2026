@@ -593,7 +593,7 @@ namespace ImageApp
                             break;
 
                         case ProcessingFunctions.Floodfill:
-                            throw new NotSupportedException($"Operation '{selected}' is currently unoptimised and crashes the application.");
+                            //throw new NotSupportedException($"Operation '{selected}' is currently unoptimised and crashes the application.");
                             //to do
                             gray = Assignment2.SLRFloodfill(gray);
                             gray = a1.AdjustContrast(gray);

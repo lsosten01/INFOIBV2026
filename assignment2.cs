@@ -25,9 +25,6 @@ namespace ImageApp
             
             //here comes the sunshine
 
-            //for sequential region labeling several steps need to be done
-            //
-
             public byte[,] SequentialRegionLabeling(byte[,] inputImage)
             {
                 //to do
@@ -35,6 +32,8 @@ namespace ImageApp
                 //which means something is wrong
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
+
+                Dictionary<byte, byte> parent = new Dictionary<byte, byte>();
 
                 (int i, int j)[] neighbours =
                 {
@@ -47,7 +46,7 @@ namespace ImageApp
                 byte[,] labeledImage = new byte [iW, iH];
 
                 //The label value that keeps track of which label value we are on
-                byte label = 1;
+                byte label = 2;
 
                 //First pass
                 for (int u = 0; u < iW; u++)
@@ -60,22 +59,32 @@ namespace ImageApp
                         //Checks the neighbouring pixels
                         foreach ((int i, int j) in neighbours)
                         {
-                            int uOffset = Math.Clamp(u + i, 0, iW - 1);
-                            int vOffset = Math.Clamp(v + j, 0, iH - 1);
+                            int uOffset = u + i;
+                            int vOffset = v + j;
+                            if (uOffset < 0 || uOffset >= iW || vOffset < 0 || vOffset >= iH){continue;}
+
                             byte labelVal = labeledImage[uOffset, vOffset];
 
                             //Sees if there is a lower label value in one of the neighbouring pixels
+                            //we need to add all 
+                            if(labelVal > 0 && tempLabel < 255 && labelVal != tempLabel)
+                            {
+                                parent = Union(parent, tempLabel, labelVal);
+                            }
+
                             if (labelVal > 0 && labelVal < tempLabel)
                             {
                                 tempLabel = labelVal;
                             }
+                           
                         }
 
                         //If no neighbouring label was found create a new label
                         if (tempLabel == 255)
                         {
                             labeledImage[u, v] = label;
-                            label++;
+                            if (label != 254){
+                                label++;}
                             //not above 254 values but eh (for now)
                         }
                         else
@@ -85,96 +94,75 @@ namespace ImageApp
                     }
                 }
 
-                labeledImage = ResolveCollisions(labeledImage, iW, iH);
-
-                //now we need to do contrast adjustment
+                labeledImage = ResolveCollisions(labeledImage, parent, iW, iH);
 
                 return labeledImage;
             }
 
-            private byte[,] ResolveCollisions(byte[,] labeledImage, int iW, int iH)
+            private byte[,] ResolveCollisions(byte[,] labeledImage, Dictionary<byte, byte> parent, int iW, int iH)
             {
                 //Second pass this needs to go a bit differently
                 //because we need to find all the labels that are connected
-                Dictionary<byte, byte> labelSets = new Dictionary<byte, byte>();
 
-                for (int u = 0; u < iW; u++)
-                for (int v = 0; v < iH; v++)
-                {
-                    if (labeledImage[u, v] > 0)
-                    {
-                        for (int i = -1; i <= 1; i++)
-                        for (int j = -1; j <= 1; j++)
-                        {
-                            int uOffset = Math.Clamp(u + i, 0, iW - 1);
-                            int vOffset = Math.Clamp(v + j, 0, iH - 1);
-
-                            byte neighbour = labeledImage[uOffset, vOffset];
-                            byte current = labeledImage[u, v];
-                            if (current != neighbour && neighbour > 0)
-                            {
-                                labelSets = Union(labelSets, neighbour, current);
-                            }
-                        }
-                    }
-                }
+                Dictionary<byte, byte> updatedDict = new Dictionary<byte, byte>();
+                //we need to relabel all the dictionary to new good labels apparently
 
                 //update the labeled image
                 for (int u = 0; u < iW; u++)
                 for (int v = 0; v < iH; v++)
                 {
-                    if (labelSets.ContainsKey(labeledImage[u, v]))
+                    if (parent.ContainsKey(labeledImage[u, v]))
                     {
-                        labeledImage[u, v] = Find(labeledImage[u, v], labelSets);
+                        labeledImage[u, v] = Find(labeledImage[u, v], parent);
                     }
                 }
 
                 return labeledImage;
             }
 
-            private byte Find(byte x, Dictionary<byte, byte> labelSets)
+            private byte Find(byte x, Dictionary<byte, byte> parent)
             {
-                if (labelSets[x] != x)
+                if (parent[x] != x)
                 {
-                    labelSets[x] = Find(labelSets[x], labelSets);
+                    parent[x] = Find(parent[x], parent);
                 }
 
-                return labelSets[x];
+                return parent[x];
             }
 
-            private Dictionary<byte, byte> Union(Dictionary<byte, byte> labelSets, byte a, byte b)
+            private Dictionary<byte, byte> Union(Dictionary<byte, byte> parent, byte a, byte b)
             {
                 //https://stackoverflow.com/questions/46383172/disjoint-set-implementation-in-c-sharp
                 //https://www.geeksforgeeks.org/dsa/introduction-to-disjoint-set-data-structure-or-union-find-algorithm/
 
-                if (!labelSets.ContainsKey(a))
+                if (!parent.ContainsKey(a))
                 {
-                    labelSets[a] = a;
+                    parent[a] = a;
                 }
 
-                if (!labelSets.ContainsKey(b))
+                if (!parent.ContainsKey(b))
                 {
-                    labelSets[b] = b;
+                    parent[b] = b;
                 }
 
-                byte rootA = Find(a, labelSets);
-                byte rootB = Find(b, labelSets);
+                byte rootA = Find(a, parent);
+                byte rootB = Find(b, parent);
 
                 if (rootA == rootB)
                 {
-                    return labelSets;
+                    return parent;
                 }
 
                 if (rootA < rootB)
                 {
-                    labelSets[rootB] = rootA;
+                    parent[rootB] = rootA;
                 }
                 else
                 {
-                    labelSets[rootA] = rootB;
+                    parent[rootA] = rootB;
                 }
 
-                return labelSets;
+                return parent;
             }
             
             public static byte[,] HoughTransform(byte[,] inputImage, int isBinary = 0, sbyte[,] horizontalKernel = null,  sbyte[,] verticalKernel = null)
@@ -366,6 +354,7 @@ namespace ImageApp
                 //according to this exercise we can pretend the image has one shape only, but I will add several inner contours
                 //in my test image to show it but idk if they want it so lets make the outercontour thing first
                 //they kinda suggest using a list so i will save the contours in lists where the gray value goes up for every next one
+                //do we have to do internal contours too?????????????/
 
                 ///IS CURRENTLY INFINITELY BUSY
                 int iW = inputImage.GetLength(0);
@@ -379,6 +368,7 @@ namespace ImageApp
                         if(inputImage[u,v] == 255)
                         {
                             contourList = TraceContour(inputImage, (u,v));
+                            break;
                         }
                     }
 
@@ -389,7 +379,7 @@ namespace ImageApp
                 int value = 0;
                 foreach(((int x, int y), int _) in contourList)
                 {
-                    outputImage[x,y] = (byte) (1 + (value * 254 / contourLength));
+                    outputImage[x,y] = (byte) (50 + (value * 205 / contourLength));
                     value++;
                 }
 
@@ -398,55 +388,56 @@ namespace ImageApp
 
             private List<((int,int), int)> TraceContour(byte [,] inputImage, (int x, int y) location)
             {
-                //this starts with a FOUND pixel. 
+                //this starts with a FOUND pixel. and saves the values of the next two pixels
                 List<((int, int), int)> contourList = new List<((int, int), int)>();
                 ((int, int), int) firstPixel = (location, 0);
                 contourList.Add(firstPixel);
-                ((int, int), int) secondPixel = NextLocation(inputImage, firstPixel);
+                var secondPixel = NextLocation(inputImage, firstPixel);
                 contourList.Add(secondPixel);
+
+                //If a contour is only one pixel return
+                if(secondPixel.Item1 == firstPixel.Item1){return contourList;}
 
                 //Sets the second pixel as the current pixel
                 ((int, int), int) currentPixel = secondPixel;
 
-                while (currentPixel != firstPixel && NextLocation(inputImage, currentPixel) != secondPixel)
+                //creates a hashset for visited pixels
+                HashSet<((int,int), int)> visited = new HashSet<((int, int), int)>();
+                visited.Add(firstPixel);
+
+                //i assume the infinite loop is here orrr
+                //for(int i = 0; i < 255; i++) //ok well the infinite loop is here but this doesnt mean this is fixed now
+                while (!visited.Contains(currentPixel)) //yeah no this is still giving an infinite loop
                 {
-                    currentPixel = NextLocation(inputImage, currentPixel);
+                    visited.Add(currentPixel);
                     contourList.Add(currentPixel);
+                    currentPixel = NextLocation(inputImage, currentPixel);
                 }
-                
+
                 return contourList;
             }
 
-            Dictionary<int, (int, int)> Directions()
-            {
-               //to do fix this a little lol 
-              Dictionary<int, (int, int)> directions = new Dictionary<int, (int, int)>();
-                directions.Add(0, (1, 0));
-                directions.Add(1, (1, 1));
-                directions.Add(2, (0, 1));
-                directions.Add(3, (-1, 1));
-                directions.Add(4, (-1, 0));
-                directions.Add(5, (-1, -1));
-                directions.Add(6, (0, -1));
-                directions.Add(7, (1, -1));
-                return directions;  
-            }
             
+            private static readonly (int dx, int dy)[] Dirs =
+            {
+                (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)
+            };
 
             private ((int, int), int) NextLocation(byte[,] inputImage, ((int, int), int) locationAndDirection)
             {
-                Dictionary<int, (int, int)> directions = Directions();
                 var ((x, y), d) = locationAndDirection;
                 var nextLocation = locationAndDirection;
                 
-                for(int steps = 0; steps < 8; steps++)//nooo it needs to go +6 mod 8 so wrap around
+                for(int steps = 0; steps < 8; steps++)
                 {
                     int i = (steps + d) % 8;
-                    var (x1, y1) = directions[i];
+                    var (x1, y1) = Dirs[i];
+                    if(x+x1 < 0 || x+x1 >= inputImage.GetLength(0) || y+y1 < 0 || y+y1 >= inputImage.GetLength(1)){continue;}
+                    //i assume the infinite loop is here orrr
                     if(inputImage[x + x1, y + y1] == 255)
                     {
                         nextLocation = ((x+ x1, y + y1), (i + 6) % 8);
-                        continue;
+                        return nextLocation;
                     }
                 }
 
