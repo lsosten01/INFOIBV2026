@@ -309,7 +309,7 @@ namespace ImageApp
 
         
             //this is to speed up the floodfill algorithm
-            private static bool [,] visited;
+            private static bool [,] _visited = new bool[0,0];
 
             public static byte [,] SLRFloodfill(byte[,] inputImage)
             {
@@ -322,7 +322,7 @@ namespace ImageApp
                     {
                         if (inputImage[u,v] == 255)
                         {   
-                            visited = new bool [iW, iH];
+                            _visited = new bool [iW, iH];
                             inputImage = Floodfill_1(inputImage, (u,v), iW, iH, label);
                             label++;
                         }
@@ -354,12 +354,12 @@ namespace ImageApp
                         int y = v+j;
                         if(x < 0 || x >= iW || y < 0 || y >= iH){continue;}
 
-                        if(visited[x,y] == false)
+                        if(_visited[x,y] == false)
                         {
                             if(input[x, y] == 255)
                             {
                                 input[x,y] = label;
-                                visited[x,y] = true;
+                                _visited[x,y] = true;
                                 queue.Enqueue((x,y));
                             }
                         }
