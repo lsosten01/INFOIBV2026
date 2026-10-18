@@ -308,6 +308,9 @@ namespace ImageApp
             }
 
         
+            //this is to speed up the floodfill algorithm
+            private static bool [,] visited;
+
             public static byte [,] SLRFloodfill(byte[,] inputImage)
             {
                 byte label = 1;
@@ -319,6 +322,7 @@ namespace ImageApp
                     {
                         if (inputImage[u,v] == 255)
                         {   
+                            visited = new bool [iW, iH];
                             inputImage = Floodfill_1(inputImage, (u,v), iW, iH, label);
                             label++;
                         }
@@ -326,25 +330,40 @@ namespace ImageApp
                 return inputImage;
             }
         
+        
             private static byte [,] Floodfill_1(byte [,] input, (int, int) currentLocation, int iW, int iH, byte label)
             {
                 //this floodfill crashes the program currently so we need a faster way
                 //https://davdata.nl/math/floodfill-old.html (look into this on the weekend)
-                var (u, v) = currentLocation;
-                input[u,v] = label;
 
-                for(int i = -1; i <= 1; i++)
-                for(int j = -1; j <= 1; j++)
+                //we can use queues instead of figuring out a complicated algorithm :DDD
+                Queue<(int,int)> queue = new(); 
+
+                input[currentLocation.Item1,currentLocation.Item2] = label;
+                queue.Enqueue(currentLocation);
+
+                while(queue.Count() > 0)
                 {
-                    if(i == 0 && j == 0){continue;}
-                    int x = u+i;
-                    int y = v+j;
-                    if(x < 0 || x >= iW || y < 0 || y >= iH){continue;}
+                    var (u,v) = queue.Dequeue();
 
-                    if(input[x, y] == 255)
+                    for(int i = -1; i <= 1; i++)
+                    for(int j = -1; j <= 1; j++)
+                    {
+                        if(i == 0 && j == 0){continue;}
+                        int x = u+i;
+                        int y = v+j;
+                        if(x < 0 || x >= iW || y < 0 || y >= iH){continue;}
+
+                        if(visited[x,y] == false)
                         {
-                            Floodfill_1(input, (x,y), iW, iH,label);
+                            if(input[x, y] == 255)
+                            {
+                                input[x,y] = label;
+                                visited[x,y] = true;
+                                queue.Enqueue((x,y));
+                            }
                         }
+                    }
                 }
                 return input;
             }
