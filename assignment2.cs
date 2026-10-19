@@ -518,7 +518,6 @@ namespace ImageApp
                 //they kinda suggest using a list so i will save the contours in lists where the gray value goes up for every next one
                 //do we have to do internal contours too?????????????/
 
-                ///IS CURRENTLY INFINITELY BUSY
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
                 List<((int, int),int)> contourList = new List<((int, int), int)>();

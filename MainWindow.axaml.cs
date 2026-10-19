@@ -113,9 +113,9 @@ namespace ImageApp
         private static int highThreshold = 110;
         private static int lowThreshold = 50;
         private static int isBinary = 0;
-        private static int minIntesityTresh = 0;
-        private static int maxGap = 12;
-        private static int minSegment = 12;
+        private static int minIntesityTresh = 50;
+        private static int maxGap = 5;
+        private static int minSegment = 30;
 
         public MainWindow()
         {
@@ -677,32 +677,20 @@ namespace ImageApp
                             break;
                         
                         case ProcessingFunctions.HoughTransform:
-                            result = a2.HoughTransform(gray, isBinary);
+                            result = a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel);
                             break;
                         
                         //Howw to vis??
                         case ProcessingFunctions.HoughPeakFinding:
-                            List<(int, int)> peaks = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary), 10);
+                            List<(int, int)> peaks = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel), 10);
                                                 result = a2.BytePeaks(peaks, 256, 256);
                             break;
                         
                         case ProcessingFunctions.HoughLineSegments:
-                            List<(int, int)> peakss = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary), 10);
-                            byte [,] houghImage = a2.HoughTransform(gray, isBinary);
+                            List<(int, int)> peakss = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel), 10);
+                            byte [,] houghImage = a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel);
                             var houghLineSegments = a2.HoughLineSegments(gray, houghImage, peakss, minIntesityTresh, minSegment, maxGap, isBinary, horizontalKernel, verticalKernel);
-                            colorPixels = houghLineSegments.Item2;
-                           /*  if (isBinary == 0)
-                            {
-                               gray = a1.EdgeMagnitude(gray, horizontalKernel, verticalKernel);
-                                
-                            }
-                            else
-                            {
-                                
-                            } */
-                            //colorPixels = ...
-                            // HoughLineSegments(byte[,] inputImage, byte[,] houghImage, List<(int theta, int r)> peaks, int minThreshold,
-                            //int minSegLength, int maxGapParam, int isBinary = 0, sbyte[,] horizontalKernel = null,  sbyte[,] verticalKernel = null)
+                            result = houghLineSegments.Item2;
                             
                             break;
 
@@ -749,11 +737,11 @@ namespace ImageApp
                     StatusText.Text = $"There are {_foregroundPixels} foreground pixels.";
                     _foregroundPixels = 0;
                 }
-                /* else if (runErosionAnalysis)
+              /*   else if (runErosionAnalysis)
                 {
                     int[,] structElem = a1.CreateGrayStructureElement();
-                    byte[,] Ci = a1.GrayscaleErodeImage(result, structElem);
-                    Ci = a1.GrayscaleErodeImage(result, structElem); 
+                    byte[,] Ci = a1.GrayscaleErodeImage(bmp, structElem);
+                    Ci = a1.GrayscaleErodeImage(bmp, structElem); 
                     int D = a1.CountDistinctValues(Ci); 
                     double E = a1.CalculateAverageIntensity(Ci);
                     StatusText.Text = $"Erosion (D = {D} distinct values, E = {E:F2} avg intensity";
