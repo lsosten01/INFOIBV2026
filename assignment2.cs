@@ -22,6 +22,7 @@ namespace ImageApp
 
         public class Assignment2
         {
+            private Assignment1 a1 = new Assignment1();
             
             //here comes the sunshine
 
@@ -106,6 +107,7 @@ namespace ImageApp
 
                 Dictionary<byte, byte> updatedDict = new Dictionary<byte, byte>();
                 //we need to relabel all the dictionary to new good labels apparently
+                //this is the only thing basically lol
 
                 //update the labeled image
                 for (int u = 0; u < iW; u++)
@@ -165,10 +167,12 @@ namespace ImageApp
                 return parent;
             }
             
-            public static byte[,] HoughTransform(byte[,] inputImage, int isBinary = 0, sbyte[,] horizontalKernel = null,  sbyte[,] verticalKernel = null)
+
+              public byte[,] HoughTransform(byte[,] inputImage, int isBinary = 0, sbyte[,] horizontalKernel = null,  sbyte[,] verticalKernel = null)
             {
-                //For customization of binary and grayscale
-                byte[,] filteredImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+                //For customization of binary and grayscale.
+                //If you want binary, it uses canny edge detection and for grayscale edge the edge magnitude
+                byte[,] filteredImage = BinaryOrGrayscale(inputImage, isBinary, horizontalKernel, verticalKernel);
                 /*if (isBinary == 0)
                     filteredImage = EdgeMagnitude(inputImage, horizontalKernel, verticalKernel);*/
                 
@@ -201,13 +205,13 @@ namespace ImageApp
                     for (int v = 0; v < iH; v++)
                     {
                         
-                        if (inputImage[u, v] > 0)
+                        if (filteredImage[u, v] > 0)
                         {
                             int weight;
                             if (isBinary == 1)
                                 weight = 1;
                             else
-                                weight = inputImage[u, v];    
+                                weight = filteredImage[u, v];    
                             
                             int x = u - uCenter;
                             int y = v - vCenter;
@@ -289,13 +293,153 @@ namespace ImageApp
             }
             
             //Hough line segments
-            /*private List<(int, int)> HoughLineSegments(byte[,] inputImage, List<(int theta, int r)> peaks, int minThreshold,
-                int minSegLength, int maxGapParam, int isBinary = 0)
+            public (List<((int x1, int y1), (int x2, int y2))> segments, byte[,,] overlayImage) 
+            HoughLineSegments(byte[,] inputImage, byte[,] houghImage, List<(int theta, int r)> peaks, int minThreshold,
+                int minSegLength, int maxGapParam, int isBinary = 0, sbyte[,] horizontalKernel = null,  sbyte[,] verticalKernel = null)
             {
-                byte[,] edgeImage
-            }*/
+                int iW = inputImage.GetLength(0);
+                int iH = inputImage.GetLength(1);
+                
+                //setup for which edge image and to set overlayimage
+                byte[,] filteredImage = BinaryOrGrayscale(inputImage, isBinary,  horizontalKernel, verticalKernel);
+                byte[,,] overlayImage = new byte[iW, iH, 3];
+                for (int u = 0; u < iW; u++) 
+                { 
+                    for (int v = 0; v < iH; v++) 
+                    { 
+                        byte val = filteredImage[u, v]; 
+                        overlayImage[u, v, 0] = val; 
+                        overlayImage[u, v, 1] = val;
+                        overlayImage[u, v, 2] = val;
+                    }
+                }
+                
+                int angularSteps = houghImage.GetLength(0); 
+                int radialSteps = houghImage.GetLength(1);
+                
+                //hough related
+                int uCenter = iW / 2; 
+                int vCenter = iH / 2; 
+                int rMax = (int)Math.Sqrt(uCenter * uCenter + vCenter * vCenter);
+                double angularStepSize = Math.PI / angularSteps; 
+                double radialStepSize = (2.0 * rMax) / radialSteps; 
+                int radiusCenter = radialSteps / 2;
+                
+                var segments = new List<((int x1, int y1), (int x2, int y2))>();
+                
+                //Go through list
+                foreach (var peak in peaks)
+                {
+                    double theta = peak.theta * angularStepSize;
+                    double radius = (peak.r - radiusCenter) * radialStepSize;
+                    
+                    double cosT = Math.Cos(theta); 
+                    double sinT = Math.Sin(theta);
+                    
+                    bool inSegment = false; 
+                    int startX = -1, startY = -1;
+                    int lastEdgeX = -1, lastEdgeY = -1; 
+                    int gapCount = 0;
+                    
+                    var currentSegmentPixels = new List<(int u, int v)>(); 
+                    var gapBuffer = new List<(int u, int v)>();
+
+                    for (int t = -rMax; t <= rMax; t++)
+                    {
+                        int u = (int)Math.Round(uCenter + radius * cosT - t * sinT);
+                        int v = (int)Math.Round(vCenter + radius * sinT + t * cosT);
+
+                        if (u < 0 || u >= iW || v < 0 || v >= iH)
+                            continue;
+
+                        byte pixelVal = filteredImage[u, v];
+
+                        bool isOn = false;
+
+                        if (isBinary == 1)
+                            isOn = pixelVal > 0;
+                        else
+                            isOn = pixelVal >= minThreshold;
+
+                        if (isOn)
+                        {
+                            if (!inSegment)
+                            {
+                                inSegment = true;
+                                startX = u;
+                                startY = v;
+                                gapCount = 0;
+                                currentSegmentPixels.Clear();
+                                gapBuffer.Clear();
+                            }
+                            else if (gapCount > 0)
+                            {
+                                currentSegmentPixels.AddRange(gapBuffer);
+                                gapBuffer.Clear();
+                                gapCount = 0;
+                            }
+
+                            lastEdgeX = u;
+                            lastEdgeY = v;
+                            currentSegmentPixels.Add((u, v));
+                        }
+                        if (inSegment)
+                        {
+                            gapCount++;
+                            gapBuffer.Add((u, v));
+                            if (gapCount > maxGapParam)
+                            {
+                                FinalizeSegment(startX, startY, lastEdgeX, lastEdgeY,
+                                    minSegLength, currentSegmentPixels, segments, overlayImage);
+                                inSegment = false;
+                                gapCount = 0;
+                                currentSegmentPixels.Clear();
+                                gapBuffer.Clear();
+                            }
+                        }
+                    }
+                    if (inSegment)
+                    {
+                        FinalizeSegment(startX, startY, lastEdgeX, lastEdgeY, 
+                            minSegLength, currentSegmentPixels, segments, overlayImage);
+                    }
+                }
+                
+                return (segments, overlayImage);
+            }
+
+            private void FinalizeSegment(int x1, int y1, int x2, int y2, int minSegLength,
+                List<(int u, int v)> pixelsToDraw,
+                List<((int x1, int y1), (int x2, int y2))> segments, byte[,,] overlayImage)
+            {
+                double length = Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
+
+                if (length >= minSegLength)
+                {
+                    segments.Add(((x1, y1), (x2, y2)));
+                    foreach (var (u, v) in pixelsToDraw)
+                    {
+                        overlayImage[u, v, 0] = 255;
+                        overlayImage[u, v, 1] = 0;
+                        overlayImage[u, v, 2] = 0;
+                    }
+                }
+            }
+
+            //For functions to call if it needs either binary edge map or grayscale edge magnitude
+            public byte[,] BinaryOrGrayscale(byte[,] inputImage, int isBinary, sbyte[,] horizontalKernel = null,  sbyte[,] verticalKernel = null)
+            {
+                byte[,] filteredImage = new byte[inputImage.GetLength(0), inputImage.GetLength(1)];
+                
+                if (isBinary == 0)
+                    filteredImage = a1.EdgeMagnitude(inputImage, horizontalKernel, verticalKernel);
+                else
+                    filteredImage = a1.CannyEdgeDetection(inputImage);
+                
+                return filteredImage;
+            }
             
-            public static byte[,] BytePeaks(List<(int theta, int r)>peaks, int angularSteps, int radialSteps) 
+            public byte[,] BytePeaks(List<(int theta, int r)>peaks, int angularSteps, int radialSteps) 
             {
             byte[,] peak = new byte[angularSteps, radialSteps];
 
@@ -306,7 +450,6 @@ namespace ImageApp
 
             return peak;
             }
-
         
             //this is to speed up the floodfill algorithm
             private static bool [,] _visited = new bool[0,0];
@@ -426,7 +569,7 @@ namespace ImageApp
 
                 //i assume the infinite loop is here orrr
                 //for(int i = 0; i < 255; i++) //ok well the infinite loop is here but this doesnt mean this is fixed now
-                while (!visited.Contains(currentPixel)) //yeah no this is still giving an infinite loop
+                while (!visited.Contains(currentPixel)) 
                 {
                     visited.Add(currentPixel);
                     contourList.Add(currentPixel);

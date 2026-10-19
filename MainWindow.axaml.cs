@@ -20,7 +20,7 @@ namespace ImageApp
         private WriteableBitmap? _loadedBitmap; // the raw loaded image, kept in color, for display in OriginalImage
         private byte[,,]? _loadedColorPixels; // [x, y, channel] with channel 0=R, 1=G, 2=B -- extracted once at load time
         private byte[,,]? _referenceColorPixels;
-        private byte[,]? _processedGray; // Processed grayscale values (nullable)
+        private object? _processedResult; 
         private static double[,] _gradientDirection;
         private static int _foregroundPixels = 0;
 
@@ -87,7 +87,10 @@ namespace ImageApp
             HighThreshold,
             LowThreshold,
             StructureElement,
-            isBinary
+            IsBinary,
+            MinimumIntensityThreshold,
+            MaximumGap,
+            MinimumSegmentLength
         }
 
         private enum FilterType
@@ -110,6 +113,9 @@ namespace ImageApp
         private static int highThreshold = 110;
         private static int lowThreshold = 50;
         private static int isBinary = 0;
+        private static int minIntesityTresh = 0;
+        private static int maxGap = 12;
+        private static int minSegment = 12;
 
         public MainWindow()
         {
@@ -189,7 +195,7 @@ namespace ImageApp
                     }
                 }
 
-                _processedGray = null;
+                _processedResult = null;
                 (OriginalImage.Source as IDisposable)?.Dispose();
                 OriginalImage.Source = _loadedBitmap;
                 (ProcessedImage.Source as IDisposable)?.Dispose();
@@ -218,7 +224,7 @@ namespace ImageApp
         /// </summary>
         private async void OnSaveImage(object? sender, RoutedEventArgs e)
         {
-            if (_processedGray == null)
+            if (_processedResult == null)
             {
                 StatusText.Text = "No processed image to save. Apply an operation first.";
                 return;
@@ -245,7 +251,12 @@ namespace ImageApp
                 if (file == null)
                     return;
 
-                using var bmp = a1.ByteArrayToBitmap(_processedGray);
+                using WriteableBitmap bmp = _processedResult switch
+                {
+                  byte [,,] colorImg => ColorArrayToBitMap(colorImg),
+                  byte[,] grayImg => ByteArrayToBitmap(grayImg),
+                  _ => throw new NotSupportedException() 
+                };
                 await using var stream = await file.OpenWriteAsync();
                 bmp.Save(stream);
                 StatusText.Text = "Processed image saved successfully.";
@@ -418,7 +429,7 @@ namespace ImageApp
                     };
                     break;
 
-                case Values.isBinary:
+                case Values.IsBinary:
                     parameterPanel.Children.Clear();
                     //Creates a combobox
                     var isBinaryBox = new ComboBox{Width = 100};
@@ -429,6 +440,87 @@ namespace ImageApp
                     isBinaryBox.SelectionChanged += (_,_) =>{
                         isBinary = isBinaryBox.SelectedIndex;};
                     break;
+                
+                case Values.MinimumIntensityThreshold:
+                    parameterPanel.Children.Clear();
+                    var minIntThreshBox = new TextBox{Width = 100, Text = minIntesityTresh.ToString()};
+                    parameterPanel.Children.Add(minIntThreshBox);
+
+                    minIntThreshBox.TextChanged += (_,_) =>
+                    {
+                        if(int.TryParse(minIntThreshBox.Text, out int value))
+                        {
+                            if(value > 255 || value < 0)
+                            {
+                                value = Math.Clamp(value, 0, 255);
+                                minIntesityTresh = value;
+                                StatusText.Text = $"Value outside of 0-255 value clamped to {value}";
+                            }
+                            else
+                            {
+                                minIntesityTresh = value;
+                            }
+                        }
+                        else
+                        {
+                            StatusText.Text = $"Please input an integer value between 0 and 255.";
+                        }
+                    };
+                    break;
+                
+                case Values.MinimumSegmentLength:
+                    parameterPanel.Children.Clear();
+                    var minSegmentBox = new TextBox{Width = 100, Text = minSegment.ToString()};
+                    parameterPanel.Children.Add(minSegmentBox);
+
+                    minSegmentBox.TextChanged += (_,_) =>
+                    {
+                        if(int.TryParse(minSegmentBox.Text, out int value))
+                        {
+                            if(value < 0)
+                            {
+                                value = 0;
+                                minSegment = value;
+                                StatusText.Text = $"Value under 0, value changed to {value}";
+                            }
+                            else
+                            {
+                                minSegment = value;
+                            }
+                        }
+                        else
+                        {
+                            StatusText.Text = $"Please input an integer value above 0.";
+                        }
+                    };
+                    break;
+                
+                case Values.MaximumGap:
+                    parameterPanel.Children.Clear();
+                    var maxGapBox = new TextBox{Width = 100, Text = maxGap.ToString()};
+                    parameterPanel.Children.Add(maxGapBox);
+
+                    maxGapBox.TextChanged += (_,_) =>
+                    {
+                        if(int.TryParse(maxGapBox.Text, out int value))
+                        {
+                            if(value < 0)
+                            {
+                                value = 0;
+                                maxGap = value;
+                                StatusText.Text = $"Value under 0, value changed to {value}";
+                            }
+                            else
+                            {
+                                maxGap = value;
+                            }
+                        }
+                        else
+                        {
+                            StatusText.Text = $"Please input an integer value above 0.";
+                        }
+                    };
+                    break;
             }
         }
 
@@ -436,6 +528,8 @@ namespace ImageApp
         /// Dispatches the selected image processing operation on a background task
         /// to keep the UI responsive during heavy computations.
         /// </summary>
+        
+
         private async void OnApply(object? sender, RoutedEventArgs e)
         {
             if (_loadedColorPixels == null)
@@ -455,16 +549,20 @@ namespace ImageApp
 
             byte[,,] colorPixels = _loadedColorPixels;
 
+            byte[,] gray = a1.ConvertToGrayscale(colorPixels);
+
+            object result = gray;
+
             try
             {
                 // Run computation and bitmap generation on a background task
                 // to keep the UI dispatcher thread responsive during heavy operations.
-                var (resultGray, resultBmp) = await Task.Run(() =>
+                var (resultObj, bmp) = await Task.Run(() =>
                 {
                     // Grayscale conversion happens here on every Apply so every
                     // operation always starts from the original loaded image, never chained
                     // from a previous Apply's result.
-                    byte[,] gray = a1.ConvertToGrayscale(colorPixels);
+                    
 
                     switch (selected)
                     {
@@ -474,57 +572,57 @@ namespace ImageApp
                             // so nothing further is needed here.
                             break;
                         case ProcessingFunctions.InvertImage:
-                            gray = a1.InvertImage(gray);
+                            result = a1.InvertImage(gray);
                             break;
                         case ProcessingFunctions.AdjustContrast:
-                            gray = a1.AdjustContrast(gray);
+                            result = a1.AdjustContrast(gray);
                             break;
                         case ProcessingFunctions.ConvolveImage:
                             if(filterType == 0){
-                            gray = a1.ConvolveImage(gray, a1.CreateGaussianFilter());}
+                            result = a1.ConvolveImage(gray, a1.CreateGaussianFilter());}
                             else{
                                 StatusText.Text = "WARNING! Median filter selected, image not processed.";}
                             break;
                         case ProcessingFunctions.MedianFilter:
                             if(filterType == 1){
-                            gray = a1.MedianFilter(gray);}
+                            result = a1.MedianFilter(gray);}
                             else{
                                 StatusText.Text = "WARNING! Gaussian filter selected, image not processed.";}
                             break;
                         case ProcessingFunctions.EdgeMagnitude:
                         {
-                            gray = a1.EdgeMagnitude(gray, horizontalKernel, verticalKernel);
+                            result = a1.EdgeMagnitude(gray, horizontalKernel, verticalKernel);
                             break;
                         }
                         case ProcessingFunctions.ThresholdImage:
-                            gray = a1.ThresholdImage(gray, threshold);
+                            result = a1.ThresholdImage(gray, threshold);
                             break;
 
                         case ProcessingFunctions.BinaryErodeImage:
                         {
                             bool[,] structElem = a1.CreateStructureElement();
-                            gray = a1.BinaryErodeImage(gray, structElem);
+                            result = a1.BinaryErodeImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryDilateImage:
                         {
                             bool[,] structElem = a1.CreateStructureElement();
-                            gray = a1.BinaryDilateImage(gray, structElem);
+                            result = a1.BinaryDilateImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryOpenImage:
                         {
                             bool[,] structElem = a1.CreateStructureElement(); // Define this structuring element yourself
-                            gray = a1.BinaryOpenImage(gray, structElem);
+                            result = a1.BinaryOpenImage(gray, structElem);
                             break;
                         }
 
                         case ProcessingFunctions.BinaryCloseImage:
                         {
                             bool[,] structElem = a1.CreateStructureElement(); // Define this structuring element yourself
-                            gray = a1.BinaryCloseImage(gray, structElem);
+                            result = a1.BinaryCloseImage(gray, structElem);
                             break;
                         }
 
@@ -532,14 +630,14 @@ namespace ImageApp
                         {
                             int[,] grayStructElem = a1.CreateGrayStructureElement(); 
                              // Define this structuring element yourself
-                            gray = a1.GrayscaleErodeImage(gray, grayStructElem);
+                            result = a1.GrayscaleErodeImage(gray, grayStructElem);
                             break;
                         }
 
                         case ProcessingFunctions.GrayscaleDilateImage:
                         {
                             int[,] grayStructElem = a1.CreateGrayStructureElement(); // Define this structuring element yourself
-                            gray = a1.GrayscaleDilateImage(gray, grayStructElem);
+                            result = a1.GrayscaleDilateImage(gray, grayStructElem);
                             break;
                         }
 
@@ -551,57 +649,71 @@ namespace ImageApp
                                     break;
                                 }
                             byte[,] refGray = a1.ConvertToGrayscale(_referenceColorPixels);
-                            gray = a1.HistogramMatching(gray, refGray);
+                            result = a1.HistogramMatching(gray, refGray);
                             break;
                         }
 
                         case ProcessingFunctions.CannyEdgeDetection:
                         {
-                            gray = a1.CannyEdgeDetection(gray);
+                            result = a1.CannyEdgeDetection(gray);
                             break;
                         }
                         
                         case ProcessingFunctions.Task1:
-                            gray = a1.CreateTask1(gray, filterType, kernelSize, horizontalKernel, verticalKernel, threshold);
+                            result = a1.CreateTask1(gray, filterType, kernelSize, horizontalKernel, verticalKernel, threshold);
                             break;
 
                         case ProcessingFunctions.Task2:
-                            gray = a1.CreateTask2(gray);
+                            result = a1.CreateTask2(gray);
                             break;
                         
                         case ProcessingFunctions.Task3:
-                            gray = a1.CreateTask3(gray);
+                            result = a1.CreateTask3(gray);
                             break;
                         
                         case ProcessingFunctions.SequentialRegionLabeling:
                             gray = a2.SequentialRegionLabeling(gray);
-                            gray = a1.AdjustContrast(gray);
+                            result = a1.AdjustContrast(gray);
                             break;
                         
                         case ProcessingFunctions.HoughTransform:
-                            //gray = a2.HoughTransform(gray, isBinary);
+                            result = a2.HoughTransform(gray, isBinary);
                             break;
                         
                         //Howw to vis??
                         case ProcessingFunctions.HoughPeakFinding:
-                            List<(int, int)> peaks = Assignment2.PeakFinding(Assignment2.HoughTransform(gray, isBinary), 10);
-                                                gray = Assignment2.BytePeaks(peaks, 256, 256);
+                            List<(int, int)> peaks = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary), 10);
+                                                result = a2.BytePeaks(peaks, 256, 256);
                             break;
                         
                         case ProcessingFunctions.HoughLineSegments:
-                            throw new NotSupportedException($"Operation '{selected}' is not yet implemented.");
+                            List<(int, int)> peakss = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary), 10);
+                            byte [,] houghImage = a2.HoughTransform(gray, isBinary);
+                            var houghLineSegments = a2.HoughLineSegments(gray, houghImage, peakss, minIntesityTresh, minSegment, maxGap, isBinary, horizontalKernel, verticalKernel);
+                            colorPixels = houghLineSegments.Item2;
+                           /*  if (isBinary == 0)
+                            {
+                               gray = a1.EdgeMagnitude(gray, horizontalKernel, verticalKernel);
+                                
+                            }
+                            else
+                            {
+                                
+                            } */
+                            //colorPixels = ...
+                            // HoughLineSegments(byte[,] inputImage, byte[,] houghImage, List<(int theta, int r)> peaks, int minThreshold,
+                            //int minSegLength, int maxGapParam, int isBinary = 0, sbyte[,] horizontalKernel = null,  sbyte[,] verticalKernel = null)
+                            
                             break;
 
                         case ProcessingFunctions.Floodfill:
-                            //throw new NotSupportedException($"Operation '{selected}' is currently unoptimised and crashes the application.");
-                            //to do
                             gray = Assignment2.SLRFloodfill(gray);
-                            gray = a1.AdjustContrast(gray);
+                            result = a1.AdjustContrast(gray);
                             break;
                             
 
                         case ProcessingFunctions.RegionContours:
-                            gray = a2.RegionContours(gray);
+                            result = a2.RegionContours(gray);
                             break;
 
                         case ProcessingFunctions.BinaryPipeline:
@@ -609,36 +721,43 @@ namespace ImageApp
                             //(this needs to be made clear in the report) 
                             //(plus in the report we have now two different thresholds)
                             gray = a1.CannyEdgeDetection(gray);
-                            gray = Assignment2.HoughTransform(gray);
+                            result = a2.HoughTransform(gray);
                             //to do and now we need to add the red lines and suchhhh
                             break;
 
                         default:
                             throw new NotSupportedException($"Operation '{selected}' is not implemented in the OnApply switch.");
                     }
-
-                    var bmp = a1.ByteArrayToBitmap(gray);
-                    return (gray, bmp);
+                    
+                    WriteableBitmap bmp = result switch
+                    {
+                        byte[,,] colorImg => ColorArrayToBitMap(colorImg),
+                        byte[,] grayImg => ByteArrayToBitmap(grayImg),
+                        _ => throw new NotSupportedException()
+                    };
+                    return (result, bmp);
+                    
+    
                 });
 
                 bool runErosionAnalysis = (selected == ProcessingFunctions.Task2);
-                _processedGray = resultGray;
+                _processedResult = resultObj;
                 (ProcessedImage.Source as IDisposable)?.Dispose();
-                ProcessedImage.Source = resultBmp;
+                ProcessedImage.Source = bmp;
                 if (_foregroundPixels != 0)
                 {
                     StatusText.Text = $"There are {_foregroundPixels} foreground pixels.";
                     _foregroundPixels = 0;
                 }
-                else if (runErosionAnalysis)
+                /* else if (runErosionAnalysis)
                 {
                     int[,] structElem = a1.CreateGrayStructureElement();
-                    byte[,] Ci = a1.GrayscaleErodeImage(resultGray, structElem);
-                    Ci = a1.GrayscaleErodeImage(resultGray, structElem); 
+                    byte[,] Ci = a1.GrayscaleErodeImage(result, structElem);
+                    Ci = a1.GrayscaleErodeImage(result, structElem); 
                     int D = a1.CountDistinctValues(Ci); 
                     double E = a1.CalculateAverageIntensity(Ci);
                     StatusText.Text = $"Erosion (D = {D} distinct values, E = {E:F2} avg intensity";
-                }
+                } */
                 else
                 {
                     StatusText.Text = $"Completed {selected}.";
@@ -654,6 +773,74 @@ namespace ImageApp
             }
         }
 
+        // ====================================================================
+        // ==================== IMAGE <-> BITMAP HELPERS (given) =============
+        // ====================================================================
+
+        /// <summary>
+        /// Builds a displayable and savable <see cref="WriteableBitmap"/> from a grayscale byte[,] array
+        /// (replicated into R, G, B; alpha fully opaque), using Avalonia's native imaging APIs.
+        /// </summary>
+        /// <param name="gray">The 2D grayscale byte array.</param>
+        /// <returns>A displayable and savable <see cref="WriteableBitmap"/>.</returns>
+        public WriteableBitmap ByteArrayToBitmap(byte[,] gray)
+        {
+            int w = gray.GetLength(0);
+            int h = gray.GetLength(1);
+            var size = new PixelSize(w, h);
+            var bmp = new WriteableBitmap(
+                size,
+                new(96, 96),
+                PixelFormat.Rgba8888,
+                AlphaFormat.Opaque
+            );
+
+            using var fb = bmp.Lock();
+
+            int totalBytes = fb.RowBytes * h;
+            byte[] buffer = new byte[totalBytes];
+            for (int y = 0; y < h; y++)
+            {
+                int rowStart = y * fb.RowBytes;
+                for (int x = 0; x < w; x++)
+                {
+                    byte val = gray[x, y];
+                    int idx = rowStart + x * 4;
+                    buffer[idx + 0] = val; // R
+                    buffer[idx + 1] = val; // G
+                    buffer[idx + 2] = val; // B
+                    buffer[idx + 3] = 255; // A (fully opaque)
+                }
+            }
+
+            Marshal.Copy(buffer, 0, fb.Address, totalBytes);
+
+            return bmp;
+        }
+
+        public WriteableBitmap ColorArrayToBitMap(byte [,,] color)
+        {
+            int w = color.GetLength(0);
+            int h = color.GetLength(1);
+            var bpm = new WriteableBitmap(new PixelSize(w,h), new (96,96), PixelFormat.Rgba8888, AlphaFormat.Opaque);
+
+            using var fb = bpm.Lock();
+            byte[] buffer = new byte [fb.RowBytes * h];
+            for(int y = 0; y < h; y++)
+            {
+                int rowStart = y * fb.RowBytes;
+                for(int x = 0; x < w; x++)
+                {
+                    int idx = rowStart + x * 4;
+                    buffer[idx + 0] = color[x, y, 0]; // R
+                    buffer[idx + 1] = color[x, y, 1]; // G
+                    buffer[idx + 2] = color[x, y, 2]; // B
+                    buffer[idx + 3] = 255;
+                }
+            }
+            Marshal.Copy(buffer, 0, fb.Address, buffer.Length);
+            return bpm;
+        }
         
     }
 }
