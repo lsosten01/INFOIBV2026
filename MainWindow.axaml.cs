@@ -75,7 +75,8 @@ namespace ImageApp
             HoughLineSegments,
             Floodfill,
             RegionContours,
-            BinaryPipeline
+            BinaryPipeline,
+            GrayScalePipeline
         }
 
         private enum Values
@@ -687,11 +688,7 @@ namespace ImageApp
                             break;
                         
                         case ProcessingFunctions.HoughLineSegments:
-                            List<(int, int)> peakss = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel), 10);
-                            byte [,] houghImage = a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel);
-                            var houghLineSegments = a2.HoughLineSegments(gray, houghImage, peakss, minIntesityTresh, minSegment, maxGap, isBinary, horizontalKernel, verticalKernel);
-                            result = houghLineSegments.Item2;
-                            
+                            result = RunHoughSegments(gray);
                             break;
 
                         case ProcessingFunctions.Floodfill:
@@ -709,8 +706,14 @@ namespace ImageApp
                             //(this needs to be made clear in the report) 
                             //(plus in the report we have now two different thresholds)
                             gray = a1.CannyEdgeDetection(gray);
-                            result = a2.HoughTransform(gray);
-                            //to do and now we need to add the red lines and suchhhh
+                            isBinary = 1;
+                            result = RunHoughSegments(gray);
+                            break;
+
+                        case ProcessingFunctions.GrayScalePipeline:
+                            gray = a1.ConvolveImage(gray, a1.CreateGaussianFilter());
+                            isBinary = 0;
+                            result = RunHoughSegments(gray);
                             break;
 
                         default:
@@ -759,6 +762,14 @@ namespace ImageApp
             {
                 ApplyButton.IsEnabled = true;
             }
+        }
+
+        private byte [,,] RunHoughSegments(byte[,] gray)
+        {
+            List<(int, int)> peakss = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel), 10);
+            byte [,] houghImage = a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel);
+            var houghLineSegments = a2.HoughLineSegments(gray, houghImage, peakss, minIntesityTresh, minSegment, maxGap, isBinary, horizontalKernel, verticalKernel);
+            return houghLineSegments.Item2;
         }
 
         // ====================================================================
