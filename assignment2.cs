@@ -213,7 +213,7 @@ namespace ImageApp
                 {
                     for (int v = 0; v < iH; v++)
                     {
-                        
+                        //if it is an edge point, 
                         if (filteredImage[u, v] > 0)
                         {
                             int weight;
@@ -222,6 +222,7 @@ namespace ImageApp
                             else
                                 weight = filteredImage[u, v];    
                             
+                            //set center for radius
                             int x = u - uCenter;
                             int y = v - vCenter;
                             
@@ -230,11 +231,13 @@ namespace ImageApp
                                 double theta = angularStepSize * angI;
                                 double radius = (x * Math.Cos(theta) + y * Math.Sin(theta));
                                 int iR = radiusCenter + (int)Math.Round(radius/radialStepSize);
-
+                                
+                                
                                 if (iR >= 0 && iR < radialSteps)
                                 {
                                     accumulator[angI, iR] += weight;
-
+                                    
+                                    //if there is a stronger line, set that as the strongest from the accumulator
                                     if (accumulator[angI, iR] > maxLine)
                                     {
                                         maxLine = accumulator[angI, iR];
@@ -246,7 +249,8 @@ namespace ImageApp
                 }
                 
                 byte[,] houghImage = new byte[angularSteps, radialSteps];
-
+                
+                //if there is a strong line, set the hough image
                 if (maxLine > 0)
                 {
                     for (int angI = 0; angI < angularSteps; angI++)
@@ -267,7 +271,8 @@ namespace ImageApp
                 int ih = houghImage.GetLength(1);
                 
                 List<(int theta, int r)> peaks = new List<(int theta, int r)>();
-
+                
+                //loop through the hough image
                 for (int theta = 1; theta < iw - 1; theta++)
                 {
                     for (int r = 1; r < ih - 1; r++)
@@ -276,11 +281,13 @@ namespace ImageApp
                         if (houghImage[theta, r] >= t_peak)
                         {
                             bool maximum = true;
-
+                            
+                            // loop through delta radius and delta
                             for (int dTheta = -1; dTheta <= 1; dTheta++)
                             {
                                 for (int dR = -1; dR <= 1; dR++)
                                 {
+                                    //bigger than threshold? move on to next cell. Stop if not
                                     if (dTheta == 0 && dR == 0) 
                                         continue;
                                     if (houghImage[theta + dTheta, r + dR] >= currentVal)
@@ -364,7 +371,8 @@ namespace ImageApp
                         byte pixelVal = filteredImage[u, v];
 
                         bool isOn = false;
-
+                        
+                        //what to use based on which edge map
                         if (isBinary == 1)
                             isOn = pixelVal > 0;
                         else
@@ -407,6 +415,7 @@ namespace ImageApp
                             }
                         }
                     }
+                    //set segment
                     if (inSegment)
                     {
                         FinalizeSegment(startX, startY, lastEdgeX, lastEdgeY, 
@@ -422,7 +431,8 @@ namespace ImageApp
                 List<((int x1, int y1), (int x2, int y2))> segments, byte[,,] overlayImage)
             {
                 double length = Math.Sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-
+                
+                //add line segment if it is greater than set parameter
                 if (length >= minSegLength)
                 {
                     segments.Add(((x1, y1), (x2, y2)));
