@@ -91,7 +91,8 @@ namespace ImageApp
             IsBinary,
             MinimumIntensityThreshold,
             MaximumGap,
-            MinimumSegmentLength
+            MinimumSegmentLength,
+            PeakThreshold
         }
 
         private enum FilterType
@@ -117,6 +118,7 @@ namespace ImageApp
         private static int minIntesityTresh = 50;
         private static int maxGap = 5;
         private static int minSegment = 30;
+        private static int t_peak = 80;
 
         public MainWindow()
         {
@@ -522,6 +524,33 @@ namespace ImageApp
                         }
                     };
                     break;
+                
+                case Values.PeakThreshold:
+                    parameterPanel.Children.Clear();
+                    var peakThreshBox = new TextBox{Width = 100, Text = t_peak.ToString()};
+                    parameterPanel.Children.Add(peakThreshBox);
+
+                    peakThreshBox.TextChanged += (_,_) =>
+                    {
+                        if(int.TryParse(peakThreshBox.Text, out int value))
+                        {
+                            if(value > 255 || value < 0)
+                            {
+                                value = Math.Clamp(value, 0, 255);
+                                t_peak = value;
+                                StatusText.Text = $"Value outside of 0-255 value clamped to {value}";
+                            }
+                            else
+                            {
+                                t_peak = value;
+                            }
+                        }
+                        else
+                        {
+                            StatusText.Text = $"Please input an integer value between 0 and 255.";
+                        }
+                    };
+                    break;
             }
         }
 
@@ -683,7 +712,7 @@ namespace ImageApp
                         
                         //Howw to vis??
                         case ProcessingFunctions.HoughPeakFinding:
-                            List<(int, int)> peaks = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel), 10);
+                            List<(int, int)> peaks = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel), t_peak);
                                                 result = a2.BytePeaks(peaks, 256, 256);
                             break;
                         
@@ -766,7 +795,7 @@ namespace ImageApp
 
         private byte [,,] RunHoughSegments(byte[,] gray)
         {
-            List<(int, int)> peakss = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel), 10);
+            List<(int, int)> peakss = Assignment2.PeakFinding(a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel), t_peak);
             byte [,] houghImage = a2.HoughTransform(gray, isBinary, horizontalKernel, verticalKernel);
             var houghLineSegments = a2.HoughLineSegments(gray, houghImage, peakss, minIntesityTresh, minSegment, maxGap, isBinary, horizontalKernel, verticalKernel);
             return houghLineSegments.Item2;
