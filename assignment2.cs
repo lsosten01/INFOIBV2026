@@ -28,9 +28,6 @@ namespace ImageApp
 
             public byte[,] SequentialRegionLabeling(byte[,] inputImage)
             {
-                //to do
-                //something is wrong with the labelling the colours are darker than if i use the floodfill function
-                //which means something is wrong
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
 
@@ -86,7 +83,6 @@ namespace ImageApp
                             labeledImage[u, v] = label;
                             if (label != 254){
                                 label++;}
-                            //not above 254 values but eh (for now)
                         }
                         else
                         {
@@ -102,30 +98,42 @@ namespace ImageApp
 
             private byte[,] ResolveCollisions(byte[,] labeledImage, Dictionary<byte, byte> parent, int iW, int iH)
             {
-                //Second pass this needs to go a bit differently
-                //because we need to find all the labels that are connected
+                Dictionary<byte, byte> relabel = new();
+                byte nextLabel = 2;
 
-                Dictionary<byte, byte> updatedDict = new Dictionary<byte, byte>();
-                //we need to relabel all the dictionary to new good labels apparently
-                //this is the only thing basically lol
-
-                //update the labeled image
                 for (int u = 0; u < iW; u++)
                 for (int v = 0; v < iH; v++)
-                {
-                    if (parent.ContainsKey(labeledImage[u, v]))
                     {
-                        labeledImage[u, v] = Find(labeledImage[u, v], parent);
-                    }
-                }
+                        byte label = labeledImage[u, v];
+                    
+                        // Skip background
+                        if (label < 2)
+                            continue;
 
+                        byte root = Find(label, parent);
+
+                        // Ensures that the root has consecutive values
+                        if (!relabel.ContainsKey(root))
+                        {
+                            relabel[root] = nextLabel++;
+                        }
+
+                        labeledImage[u, v] = relabel[root];
+                    }
                 return labeledImage;
             }
 
             private byte Find(byte x, Dictionary<byte, byte> parent)
             {
+                if (!parent.ContainsKey(x))
+                {
+                    parent[x] = x;
+                    return x;
+                }
+                
                 if (parent[x] != x)
                 {
+                    //If the parent of x is not x, find the parent of x recursively
                     parent[x] = Find(parent[x], parent);
                 }
 
@@ -134,6 +142,7 @@ namespace ImageApp
 
             private Dictionary<byte, byte> Union(Dictionary<byte, byte> parent, byte a, byte b)
             {
+                //Union find implementation based on the concepts described in:
                 //https://stackoverflow.com/questions/46383172/disjoint-set-implementation-in-c-sharp
                 //https://www.geeksforgeeks.org/dsa/introduction-to-disjoint-set-data-structure-or-union-find-algorithm/
 
