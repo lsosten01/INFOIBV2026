@@ -451,12 +451,14 @@ namespace ImageApp
             return peak;
             }
         
-            //this is to speed up the floodfill algorithm
+            //To speed up the floodfill algorithm an array of visited pixels will be saved
+            //So that the algorithm does not have to compute them multiple times
             private static bool [,] _visited = new bool[0,0];
 
             public static byte [,] SLRFloodfill(byte[,] inputImage)
             {
-                byte label = 1;
+                //Labels start at 2, as 1 is seen as unlabelled foreground
+                byte label = 2;
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
 
@@ -465,28 +467,29 @@ namespace ImageApp
                     {
                         if (inputImage[u,v] == 255)
                         {   
+                            //For every shape that gets filled a new visited list will be created
                             _visited = new bool [iW, iH];
-                            inputImage = Floodfill_1(inputImage, (u,v), iW, iH, label);
-                            label++;
+                            inputImage = Floodfill(inputImage, (u,v), iW, iH, label);
+                            label = (byte) Math.Clamp(label+1, 2, 254);
                         }
                     }
                 return inputImage;
             }
         
         
-            private static byte [,] Floodfill_1(byte [,] input, (int, int) currentLocation, int iW, int iH, byte label)
+            private static byte [,] Floodfill(byte [,] input, (int, int) currentLocation, int iW, int iH, byte label)
             {
-                //this floodfill crashes the program currently so we need a faster way
-                //https://davdata.nl/math/floodfill-old.html (look into this on the weekend)
-
-                //we can use queues instead of figuring out a complicated algorithm :DDD
+                //To not overload the application, queus are used instead of direct recursion
                 Queue<(int,int)> queue = new(); 
 
+                //Sets the currentlocations label to the label value 
                 input[currentLocation.Item1,currentLocation.Item2] = label;
                 queue.Enqueue(currentLocation);
 
                 while(queue.Count() > 0)
                 {
+                    //Takes the location from the queue and sees if the neighbours are connected
+                    //If so, neighbour will be added to the queue
                     var (u,v) = queue.Dequeue();
 
                     for(int i = -1; i <= 1; i++)
@@ -513,11 +516,7 @@ namespace ImageApp
 
             public byte [,] RegionContours(byte [,] inputImage)
             {
-                //according to this exercise we can pretend the image has one shape only, but I will add several inner contours
-                //in my test image to show it but idk if they want it so lets make the outercontour thing first
-                //they kinda suggest using a list so i will save the contours in lists where the gray value goes up for every next one
-                //do we have to do internal contours too?????????????/
-
+                //This function finds the first pixel that is part of the contour and constructs the image
                 int iW = inputImage.GetLength(0);
                 int iH = inputImage.GetLength(1);
                 List<((int, int),int)> contourList = new List<((int, int), int)>();
@@ -549,7 +548,8 @@ namespace ImageApp
 
             private List<((int,int), int)> TraceContour(byte [,] inputImage, (int x, int y) location)
             {
-                //this starts with a FOUND pixel. and saves the values of the next two pixels
+                //this starts with a FOUND pixel. and saves the values of the next pixel
+                //The list contains a tuple for u,v coordinates and an int for a direction
                 List<((int, int), int)> contourList = new List<((int, int), int)>();
                 ((int, int), int) firstPixel = (location, 0);
                 contourList.Add(firstPixel);
@@ -559,15 +559,13 @@ namespace ImageApp
                 //If a contour is only one pixel return
                 if(secondPixel.Item1 == firstPixel.Item1){return contourList;}
 
-                //Sets the second pixel as the current pixel
                 ((int, int), int) currentPixel = secondPixel;
 
-                //creates a hashset for visited pixels
                 HashSet<((int,int), int)> visited = new HashSet<((int, int), int)>();
                 visited.Add(firstPixel);
 
-                //i assume the infinite loop is here orrr
-                //for(int i = 0; i < 255; i++) //ok well the infinite loop is here but this doesnt mean this is fixed now
+                //Because items in the list contain a direction, 
+                //once a pixel that has the same coordinates and direction is found the loop stops
                 while (!visited.Contains(currentPixel)) 
                 {
                     visited.Add(currentPixel);
@@ -579,6 +577,7 @@ namespace ImageApp
             }
 
             
+            //The different directions that need to be traced
             private static readonly (int dx, int dy)[] Dirs =
             {
                 (1, 0), (1, 1), (0, 1), (-1, 1), (-1, 0), (-1, -1), (0, -1), (1, -1)
@@ -586,18 +585,21 @@ namespace ImageApp
 
             private ((int, int), int) NextLocation(byte[,] inputImage, ((int, int), int) locationAndDirection)
             {
+                //Will give the next location and direction based on the previous location and direction
                 var ((x, y), d) = locationAndDirection;
                 var nextLocation = locationAndDirection;
                 
                 for(int steps = 0; steps < 8; steps++)
                 {
-                    int i = (steps + d) % 8;
-                    var (x1, y1) = Dirs[i];
+                    //Starting from the current direction we will start searching
+                    //The directions are in mod 8
+                    int direction = (steps + d) % 8;
+                    var (x1, y1) = Dirs[direction];
                     if(x+x1 < 0 || x+x1 >= inputImage.GetLength(0) || y+y1 < 0 || y+y1 >= inputImage.GetLength(1)){continue;}
-                    //i assume the infinite loop is here orrr
                     if(inputImage[x + x1, y + y1] == 255)
                     {
-                        nextLocation = ((x+ x1, y + y1), (i + 6) % 8);
+                        //The next direction given is 'd + 6 mod 8' 
+                        nextLocation = ((x+ x1, y + y1), (direction + 6) % 8);
                         return nextLocation;
                     }
                 }

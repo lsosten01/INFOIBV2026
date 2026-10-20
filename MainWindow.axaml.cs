@@ -74,7 +74,7 @@ namespace ImageApp
             HoughPeakFinding,
             HoughLineSegments,
             Floodfill,
-            RegionContours,
+            TraceBoundary,
             BinaryPipeline,
             GrayScalePipeline
         }
@@ -697,7 +697,7 @@ namespace ImageApp
                             break;
                             
 
-                        case ProcessingFunctions.RegionContours:
+                        case ProcessingFunctions.TraceBoundary:
                             result = a2.RegionContours(gray);
                             break;
 
